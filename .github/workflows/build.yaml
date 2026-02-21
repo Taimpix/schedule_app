@@ -55,7 +55,7 @@ jobs:
       #   run: flutter test
 
       - name: Build iOS Release
-        run: flutter build ios --release
+        run: flutter build ios --no-codesign
 
       - name: Create unsigned IPA
         run: |
