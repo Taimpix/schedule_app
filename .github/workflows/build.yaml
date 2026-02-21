@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:  # Для ручного запуска
 
 jobs:
   build-android:
@@ -102,4 +103,3 @@ jobs:
         with:
           name: macos-app
           path: build/macos/Build/Products/Release/app.zip
-```
