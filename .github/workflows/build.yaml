@@ -1,4 +1,4 @@
-name: Flutter Build APK and IPA
+name: Flutter Build APK, IPA, and macOS
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'  # Укажите актуальную версию Flutter
+          flutter-version: '3.38.1'  # Укажите актуальную версию Flutter
           channel: 'stable'
 
       - name: Install dependencies
@@ -45,7 +45,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'  # Укажите актуальную версию Flutter
+          flutter-version: '3.38.1'  # Укажите актуальную версию Flutter
           channel: 'stable'
 
       - name: Install dependencies
@@ -70,3 +70,37 @@ jobs:
         with:
           name: unsigned-ipa
           path: build/ios/iphoneos/app.ipa
+
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.1'  # Укажите актуальную версию Flutter
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test  # Опционально
+
+      - name: Build macOS Release
+        run: flutter build macos --release
+
+      - name: Archive macOS App
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r app.zip *.app  # Архивирует приложение (замените *.app на имя вашего app, если нужно)
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: build/macos/Build/Products/Release/app.zip
+```
