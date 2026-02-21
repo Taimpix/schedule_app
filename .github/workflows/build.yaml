@@ -1,0 +1,72 @@
+name: Flutter Build APK and IPA
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Для ручного запуска
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'  # Укажите актуальную версию Flutter
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test  # Опционально
+
+      - name: Build APK split-per-abi
+        run: flutter build apk --split-per-abi --release
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-files
+          path: build/app/outputs/flutter-apk/*.apk  # Загружает все split APK
+
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'  # Укажите актуальную версию Flutter
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test  # Опционально
+
+      - name: Build iOS Release
+        run: flutter build ios --release
+
+      - name: Create unsigned IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir Payload
+          cp -r Runner.app Payload/
+          zip -r Payload.zip Payload
+          mv Payload.zip app.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-ipa
+          path: build/ios/iphoneos/app.ipa
