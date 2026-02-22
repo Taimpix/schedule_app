@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 import 'theme/app_theme.dart';
+import 'data/schedule_repository.dart';
 import 'pages/schedule_page.dart';
 import 'pages/settings_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AppThemeNotifier.instance.load();
+  // Загружаем тему и данные параллельно
+  await Future.wait([
+    AppThemeNotifier.instance.load(),
+    ScheduleRepository.instance.init(),
+  ]);
   runApp(const MyApp());
 }
 

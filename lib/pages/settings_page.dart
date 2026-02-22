@@ -1,33 +1,11 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../data/schedule_repository.dart';
+import '../data/models.dart';
 
 // ─────────────────────────── Данные ──────────────────────────────
-
-const _kGroups = [
-  'И-2-23-01', 'И-2-23-02',
-  'И-2-22-01', 'И-2-22-02',
-  'П-2-23-01', 'П-2-23-02',
-  'П-2-22-01', 'П-2-22-02',
-  'Б-2-23-01', 'Б-2-23-02',
-  'Б-2-22-01', 'Б-2-22-02',
-];
-
-const _kTeachers = [
-  'Иванов А.П.',
-  'Петрова М.В.',
-  'Сидоров К.Н.',
-  'Козлова Н.А.',
-  'Новикова Е.С.',
-  'Захаров Д.И.',
-  'Морозова Т.Ю.',
-  'Волков С.Р.',
-  'Лебедева О.М.',
-  'Соколов В.Г.',
-  'Фёдорова Ирина Константиновна',
-  'Алексеев Павел Владимирович',
-  'Черепанова Светлана Анатольевна',
-  'Воронцов-Вельяминов Борис Александрович',
-];
+// Группы и преподаватели загружаются из ScheduleRepository
+// (данные приходят с сервера при первом запуске, затем кешируются)
 
 const _kPresetColors = [
   Color(0xFF6C9EE8), Color(0xFF5B8AF0), Color(0xFF7C6EE8),
@@ -51,21 +29,48 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  String _selectedGroup = 'И-2-23-01';
-  String _selectedTeacher = 'Иванов А.П.';
+  Group? _selectedGroup;
+  Teacher? _selectedTeacher;
 
-  Future<void> _openSearch({
-    required String title,
-    required List<String> items,
-    required String selected,
-    required ValueChanged<String> onSelected,
-  }) async {
+  Future<void> _openGroupSearch() async {
+    final repo = ScheduleRepository.instance;
+    final groups = repo.groups;
+    if (groups.isEmpty) return;
+
     await Navigator.of(context).push(PageRouteBuilder(
       opaque: false,
       barrierColor: Colors.black.withOpacity(0.35),
-      pageBuilder: (_, __, ___) => _SearchPage(
-        title: title, items: items, selected: selected,
-        onSelected: (v) { onSelected(v); Navigator.pop(context); },
+      pageBuilder: (_, __, ___) => _GroupSearchPage(
+        groups: groups,
+        selected: _selectedGroup,
+        onSelected: (g) {
+          setState(() => _selectedGroup = g);
+          Navigator.pop(context);
+        },
+      ),
+      transitionsBuilder: (_, anim, __, child) => SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+            .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+        child: child,
+      ),
+    ));
+  }
+
+  Future<void> _openTeacherSearch() async {
+    final repo = ScheduleRepository.instance;
+    final teachers = repo.teachers;
+    if (teachers.isEmpty) return;
+
+    await Navigator.of(context).push(PageRouteBuilder(
+      opaque: false,
+      barrierColor: Colors.black.withOpacity(0.35),
+      pageBuilder: (_, __, ___) => _TeacherSearchPage(
+        teachers: teachers,
+        selected: _selectedTeacher,
+        onSelected: (t) {
+          setState(() => _selectedTeacher = t);
+          Navigator.pop(context);
+        },
       ),
       transitionsBuilder: (_, anim, __, child) => SlideTransition(
         position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
@@ -152,27 +157,51 @@ class _SettingsPageState extends State<SettingsPage> {
 
             // ── Расписание ──────────────────────────────────────
             _SectionLabel('Расписание', textSecondary),
-            _GlassCard(bg: cardBg, border: cardBorder, children: [
-              _SelectTile(
-                icon: Icons.group_rounded, title: 'Группа',
-                value: _selectedGroup, textPrimary: textPrimary, seed: seed,
-                onTap: () => _openSearch(
-                  title: 'Выбор группы', items: _kGroups,
-                  selected: _selectedGroup,
-                  onSelected: (v) => setState(() => _selectedGroup = v),
-                ),
-              ),
-              div(),
-              _SelectTile(
-                icon: Icons.person_rounded, title: 'Преподаватель',
-                value: _selectedTeacher, textPrimary: textPrimary, seed: seed,
-                onTap: () => _openSearch(
-                  title: 'Выбор преподавателя', items: _kTeachers,
-                  selected: _selectedTeacher,
-                  onSelected: (v) => setState(() => _selectedTeacher = v),
-                ),
-              ),
-            ]),
+            ListenableBuilder(
+              listenable: ScheduleRepository.instance,
+              builder: (context, _) {
+                final repo = ScheduleRepository.instance;
+
+                // Показываем ошибку, если она есть и данных нет
+                if (repo.error != null && !repo.hasData)
+                  return _ErrorCard(
+                    message: repo.error!,
+                    seed: seed,
+                    textPrimary: textPrimary,
+                    onRetry: () => repo.refresh(),
+                  );
+
+                return _GlassCard(bg: cardBg, border: cardBorder, children: [
+                  // Баннер ошибки поверх старых данных
+                  if (repo.error != null)
+                    _InlineBanner(message: repo.error!, seed: seed),
+
+                  // Группа
+                  _SelectTile(
+                    icon: Icons.group_rounded,
+                    title: 'Группа',
+                    value: _selectedGroup?.name ?? '—',
+                    isEmpty: _selectedGroup == null,
+                    isLoading: repo.isLoading && repo.groups.isEmpty,
+                    textPrimary: textPrimary,
+                    seed: seed,
+                    onTap: repo.groups.isEmpty ? null : _openGroupSearch,
+                  ),
+                  div(),
+                  // Преподаватель
+                  _SelectTile(
+                    icon: Icons.person_rounded,
+                    title: 'Преподаватель',
+                    value: _selectedTeacher?.name ?? '—',
+                    isEmpty: _selectedTeacher == null,
+                    isLoading: repo.isLoading && repo.teachers.isEmpty,
+                    textPrimary: textPrimary,
+                    seed: seed,
+                    onTap: repo.teachers.isEmpty ? null : _openTeacherSearch,
+                  ),
+                ]);
+              },
+            ),
 
             const SizedBox(height: 16),
 
@@ -593,40 +622,19 @@ class _ColorThumb extends SliderComponentShape {
   }
 }
 
-// ════════════════════════ SEARCH PAGE ════════════════════════════
+// ════════════════════════ SEARCH PAGES ═══════════════════════════
+// Общая shell для полноэкранного поиска
 
-class _SearchPage extends StatefulWidget {
+class _SearchShell extends StatelessWidget {
   final String title;
-  final List<String> items;
-  final String selected;
-  final ValueChanged<String> onSelected;
+  final Widget searchField;
+  final Widget body;
 
-  const _SearchPage({
-    required this.title, required this.items,
-    required this.selected, required this.onSelected,
+  const _SearchShell({
+    required this.title,
+    required this.searchField,
+    required this.body,
   });
-
-  @override
-  State<_SearchPage> createState() => _SearchPageState();
-}
-
-class _SearchPageState extends State<_SearchPage> {
-  late List<String> _filtered;
-  final _ctrl = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _filtered = widget.items;
-    _ctrl.addListener(() {
-      final q = _ctrl.text.toLowerCase();
-      setState(() => _filtered =
-          widget.items.where((e) => e.toLowerCase().contains(q)).toList());
-    });
-  }
-
-  @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -640,9 +648,6 @@ class _SearchPageState extends State<_SearchPage> {
         final textPrimary = isDark ? Colors.white : const Color(0xFF1A3A5C);
         final textSecondary =
         isDark ? Colors.white60 : const Color(0xFF5A7FA8);
-        final itemBg = isDark
-            ? Colors.white.withOpacity(0.07)
-            : Colors.white.withOpacity(0.55);
 
         return Scaffold(
           backgroundColor: Colors.transparent,
@@ -651,7 +656,8 @@ class _SearchPageState extends State<_SearchPage> {
             decoration: BoxDecoration(
               color: bg,
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(32), topRight: Radius.circular(32),
+                topLeft: Radius.circular(32),
+                topRight: Radius.circular(32),
               ),
             ),
             child: Column(children: [
@@ -659,103 +665,379 @@ class _SearchPageState extends State<_SearchPage> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 10, 16, 16),
                 child: Row(children: [
-                  Text(widget.title,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700,
+                  Text(title,
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
                           color: textPrimary)),
                   const Spacer(),
                   _CloseButton(color: textSecondary),
                 ]),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: itemBg,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: seed.withOpacity(0.3), width: 1.2),
-                  ),
-                  child: TextField(
-                    controller: _ctrl, autofocus: true,
-                    style: TextStyle(fontSize: 15, color: textPrimary),
-                    decoration: InputDecoration(
-                      hintText: 'Поиск...',
-                      hintStyle: TextStyle(fontSize: 15,
-                          color: textSecondary.withOpacity(0.7)),
-                      prefixIcon: Icon(Icons.search_rounded,
-                          color: textSecondary, size: 22),
-                      suffixIcon: _ctrl.text.isNotEmpty
-                          ? GestureDetector(
-                          onTap: () {
-                            _ctrl.clear();
-                            setState(() => _filtered = widget.items);
-                          },
-                          child: Icon(Icons.cancel_rounded,
-                              color: textSecondary, size: 18))
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding:
-                      const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-              ),
+              searchField,
               const SizedBox(height: 12),
-              Expanded(
-                child: _filtered.isEmpty
-                    ? Center(child: Text('Ничего не найдено',
-                    style: TextStyle(fontSize: 15, color: textSecondary)))
-                    : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                  itemCount: _filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
-                  itemBuilder: (context, i) {
-                    final item = _filtered[i];
-                    final isSel = item == widget.selected;
-                    return GestureDetector(
-                      onTap: () => widget.onSelected(item),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: isSel ? seed.withOpacity(0.18) : itemBg,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isSel ? seed.withOpacity(0.5)
-                                : Colors.white.withOpacity(0.15),
-                            width: 1.3,
-                          ),
-                        ),
-                        child: Row(children: [
-                          Expanded(
-                            child: Text(item,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: isSel
-                                      ? FontWeight.w600 : FontWeight.w400,
-                                  color: textPrimary, height: 1.35,
-                                )),
-                          ),
-                          if (isSel) ...[
-                            const SizedBox(width: 10),
-                            Container(
-                              width: 24, height: 24,
-                              decoration: BoxDecoration(
-                                  color: seed, shape: BoxShape.circle),
-                              child: const Icon(Icons.check_rounded,
-                                  size: 14, color: Colors.white),
-                            ),
-                          ],
-                        ]),
-                      ),
-                    );
-                  },
-                ),
-              ),
+              Expanded(child: body),
             ]),
           ),
         );
       },
+    );
+  }
+}
+
+// ── Поиск групп ──────────────────────────────────────────────────
+
+class _GroupSearchPage extends StatefulWidget {
+  final List<Group> groups;
+  final Group? selected;
+  final ValueChanged<Group> onSelected;
+
+  const _GroupSearchPage({
+    required this.groups,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  State<_GroupSearchPage> createState() => _GroupSearchPageState();
+}
+
+class _GroupSearchPageState extends State<_GroupSearchPage> {
+  late List<Group> _filtered;
+  final _ctrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.groups;
+    _ctrl.addListener(() {
+      final q = _ctrl.text.toLowerCase();
+      setState(() => _filtered = widget.groups
+          .where((g) =>
+      g.name.toLowerCase().contains(q) ||
+          g.faculty.toLowerCase().contains(q) ||
+          g.direction.toLowerCase().contains(q))
+          .toList());
+    });
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppThemeNotifier.instance.isDark;
+    final seed = AppThemeNotifier.instance.seedColor;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1A3A5C);
+    final textSecondary = isDark ? Colors.white60 : const Color(0xFF5A7FA8);
+    final itemBg = isDark
+        ? Colors.white.withOpacity(0.07)
+        : Colors.white.withOpacity(0.55);
+
+    return _SearchShell(
+      title: 'Выбор группы',
+      searchField: _SearchField(ctrl: _ctrl, seed: seed,
+          textPrimary: textPrimary, textSecondary: textSecondary,
+          onClear: () => setState(() => _filtered = widget.groups)),
+      body: _filtered.isEmpty
+          ? Center(child: Text('Ничего не найдено',
+          style: TextStyle(fontSize: 15, color: textSecondary)))
+          : ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+        itemCount: _filtered.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 6),
+        itemBuilder: (context, i) {
+          final group = _filtered[i];
+          final isSel = group.id == widget.selected?.id;
+          return GestureDetector(
+            onTap: () => widget.onSelected(group),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 13),
+              decoration: BoxDecoration(
+                color: isSel ? seed.withOpacity(0.18) : itemBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isSel
+                      ? seed.withOpacity(0.5)
+                      : Colors.white.withOpacity(0.15),
+                  width: 1.3,
+                ),
+              ),
+              child: Row(children: [
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(group.name,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: isSel
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                          color: textPrimary,
+                        )),
+                    const SizedBox(height: 2),
+                    Text('${group.faculty} · ${group.direction}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: textSecondary,
+                            height: 1.3)),
+                  ],
+                )),
+                if (isSel) ...[
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 24, height: 24,
+                    decoration: BoxDecoration(
+                        color: seed, shape: BoxShape.circle),
+                    child: const Icon(Icons.check_rounded,
+                        size: 14, color: Colors.white),
+                  ),
+                ],
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── Поиск преподавателей ─────────────────────────────────────────
+
+class _TeacherSearchPage extends StatefulWidget {
+  final List<Teacher> teachers;
+  final Teacher? selected;
+  final ValueChanged<Teacher> onSelected;
+
+  const _TeacherSearchPage({
+    required this.teachers,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  State<_TeacherSearchPage> createState() => _TeacherSearchPageState();
+}
+
+class _TeacherSearchPageState extends State<_TeacherSearchPage> {
+  late List<Teacher> _filtered;
+  final _ctrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.teachers;
+    _ctrl.addListener(() {
+      final q = _ctrl.text.toLowerCase();
+      setState(() => _filtered = widget.teachers
+          .where((t) => t.name.toLowerCase().contains(q))
+          .toList());
+    });
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppThemeNotifier.instance.isDark;
+    final seed = AppThemeNotifier.instance.seedColor;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1A3A5C);
+    final textSecondary = isDark ? Colors.white60 : const Color(0xFF5A7FA8);
+    final itemBg = isDark
+        ? Colors.white.withOpacity(0.07)
+        : Colors.white.withOpacity(0.55);
+
+    return _SearchShell(
+      title: 'Выбор преподавателя',
+      searchField: _SearchField(ctrl: _ctrl, seed: seed,
+          textPrimary: textPrimary, textSecondary: textSecondary,
+          onClear: () => setState(() => _filtered = widget.teachers)),
+      body: _filtered.isEmpty
+          ? Center(child: Text('Ничего не найдено',
+          style: TextStyle(fontSize: 15, color: textSecondary)))
+          : ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+        itemCount: _filtered.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 6),
+        itemBuilder: (context, i) {
+          final teacher = _filtered[i];
+          final isSel = teacher.id == widget.selected?.id;
+          return GestureDetector(
+            onTap: () => widget.onSelected(teacher),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: isSel ? seed.withOpacity(0.18) : itemBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isSel
+                      ? seed.withOpacity(0.5)
+                      : Colors.white.withOpacity(0.15),
+                  width: 1.3,
+                ),
+              ),
+              child: Row(children: [
+                Expanded(
+                  child: Text(teacher.name,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: isSel
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        color: textPrimary,
+                        height: 1.35,
+                      )),
+                ),
+                if (isSel) ...[
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 24, height: 24,
+                    decoration: BoxDecoration(
+                        color: seed, shape: BoxShape.circle),
+                    child: const Icon(Icons.check_rounded,
+                        size: 14, color: Colors.white),
+                  ),
+                ],
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── Поле поиска (переиспользуется) ───────────────────────────────
+
+class _SearchField extends StatelessWidget {
+  final TextEditingController ctrl;
+  final Color seed, textPrimary, textSecondary;
+  final VoidCallback onClear;
+
+  const _SearchField({
+    required this.ctrl, required this.seed,
+    required this.textPrimary, required this.textSecondary,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppThemeNotifier.instance.isDark;
+    final itemBg = isDark
+        ? Colors.white.withOpacity(0.07)
+        : Colors.white.withOpacity(0.55);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: itemBg,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: seed.withOpacity(0.3), width: 1.2),
+        ),
+        child: TextField(
+          controller: ctrl,
+          autofocus: true,
+          style: TextStyle(fontSize: 15, color: textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Поиск...',
+            hintStyle: TextStyle(
+                fontSize: 15, color: textSecondary.withOpacity(0.7)),
+            prefixIcon:
+            Icon(Icons.search_rounded, color: textSecondary, size: 22),
+            suffixIcon: ctrl.text.isNotEmpty
+                ? GestureDetector(
+                onTap: () { ctrl.clear(); onClear(); },
+                child: Icon(Icons.cancel_rounded,
+                    color: textSecondary, size: 18))
+                : null,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Карточка ошибки (нет данных вообще) ──────────────────────────
+
+class _ErrorCard extends StatelessWidget {
+  final String message;
+  final Color seed, textPrimary;
+  final VoidCallback onRetry;
+
+  const _ErrorCard({
+    required this.message, required this.seed,
+    required this.textPrimary, required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppThemeNotifier.instance.isDark;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(isDark ? 0.15 : 0.10),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1.2),
+      ),
+      child: Row(children: [
+        Icon(Icons.wifi_off_rounded, color: Colors.orange.shade700, size: 22),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(message,
+              style: TextStyle(
+                  fontSize: 13, color: textPrimary, height: 1.4)),
+        ),
+        TextButton(
+          onPressed: onRetry,
+          child: Text('Повтор',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: seed)),
+        ),
+      ]),
+    );
+  }
+}
+
+// ── Баннер ошибки поверх устаревших данных ───────────────────────
+
+class _InlineBanner extends StatelessWidget {
+  final String message;
+  final Color seed;
+
+  const _InlineBanner({required this.message, required this.seed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.withOpacity(0.25), width: 1),
+      ),
+      child: Row(children: [
+        const Icon(Icons.info_outline_rounded,
+            color: Colors.orange, size: 16),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(message,
+              style: const TextStyle(
+                  fontSize: 12, color: Colors.orange, height: 1.3)),
+        ),
+      ]),
     );
   }
 }
@@ -825,43 +1107,79 @@ class _ColorSchemeTile extends StatelessWidget {
 class _SelectTile extends StatelessWidget {
   final IconData icon;
   final String title, value;
+  final bool isEmpty;
+  final bool isLoading;
   final Color textPrimary, seed;
-  final VoidCallback onTap;
-  const _SelectTile({required this.icon, required this.title, required this.value,
-    required this.textPrimary, required this.seed, required this.onTap});
+  final VoidCallback? onTap;
+
+  const _SelectTile({
+    required this.icon, required this.title, required this.value,
+    required this.isEmpty, required this.isLoading,
+    required this.textPrimary, required this.seed, required this.onTap,
+  });
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(22),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(children: [
-        _IconBox(icon: icon, seed: seed),
-        const SizedBox(width: 12),
-        Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: TextStyle(fontSize: 15,
-              fontWeight: FontWeight.w500, color: textPrimary)),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: seed.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: seed.withOpacity(0.25), width: 1),
-            ),
-            child: Text(value, softWrap: true,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                    color: textPrimary, height: 1.3)),
-          ),
-        ])),
-        const SizedBox(width: 8),
-        Icon(Icons.chevron_right_rounded,
-            color: textPrimary.withOpacity(0.3), size: 20),
-      ]),
-    ),
-  );
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(children: [
+          _IconBox(icon: icon, seed: onTap == null ? seed.withOpacity(0.4) : seed),
+          const SizedBox(width: 12),
+          Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: TextStyle(fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: onTap == null
+                    ? textPrimary.withOpacity(0.4)
+                    : textPrimary)),
+            const SizedBox(height: 4),
+            if (isLoading)
+            // Скелетон-заглушка пока данные грузятся
+              Container(
+                height: 24,
+                width: 120,
+                decoration: BoxDecoration(
+                  color: seed.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isEmpty
+                      ? seed.withOpacity(0.06)
+                      : seed.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isEmpty
+                        ? seed.withOpacity(0.12)
+                        : seed.withOpacity(0.25),
+                    width: 1,
+                  ),
+                ),
+                child: Text(value, softWrap: true,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isEmpty ? FontWeight.w400 : FontWeight.w600,
+                      color: isEmpty
+                          ? textPrimary.withOpacity(0.35)
+                          : textPrimary,
+                      height: 1.3,
+                    )),
+              ),
+          ])),
+          const SizedBox(width: 8),
+          Icon(Icons.chevron_right_rounded,
+              color: textPrimary.withOpacity(onTap == null ? 0.15 : 0.3),
+              size: 20),
+        ]),
+      ),
+    );
+  }
 }
 
 class _GlassCard extends StatelessWidget {
