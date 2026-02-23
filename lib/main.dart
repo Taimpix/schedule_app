@@ -203,7 +203,7 @@ class _MainScreenState extends State<MainScreen> {
                             child: GestureDetector(
                               onTap: () => SchedulePage.openCalendarGlobal(),
                               child: Padding(
-                                padding: const EdgeInsets.all(18),
+                                padding: const EdgeInsets.all(21),
                                 child: Icon(
                                   Icons.calendar_month_rounded,
                                   size: 28,
