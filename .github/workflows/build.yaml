@@ -63,7 +63,7 @@ jobs:
       #   run: flutter test
 
       - name: Build macOS Release
-        run: flutter build macos --no-codesign
+        run: flutter build macos
 
       - name: Archive macOS App
         run: |
