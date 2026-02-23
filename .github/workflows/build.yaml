@@ -7,34 +7,6 @@ on:
   workflow_dispatch:  # Для ручного запуска
 
 jobs:
-  build-android:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.38.1'  # Обновленная версия Flutter
-          channel: 'stable'
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      # - name: Run tests  # Закомментировано из-за ошибки в smoke тесте; исправьте тест в widget_test.dart перед включением
-      #   run: flutter test
-
-      - name: Build APK split-per-abi
-        run: flutter build apk --split-per-abi --release
-
-      - name: Upload APK artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: apk-files
-          path: build/app/outputs/flutter-apk/*.apk  # Загружает все split APK
-
   build-ios:
     runs-on: macos-latest
 
@@ -91,7 +63,7 @@ jobs:
       #   run: flutter test
 
       - name: Build macOS Release
-        run: flutter build macos --release
+        run: flutter build macos --no-codesign
 
       - name: Archive macOS App
         run: |
