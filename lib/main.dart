@@ -165,7 +165,7 @@ class _MainScreenState extends State<MainScreen> {
                         settings: glassSettings,
                         shape: LiquidRoundedSuperellipse(borderRadius: 50),
                         child: Padding(
-                          padding: const EdgeInsets.all(5),
+                          padding: const EdgeInsets.all(8),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -203,10 +203,10 @@ class _MainScreenState extends State<MainScreen> {
                             child: GestureDetector(
                               onTap: () => SchedulePage.openCalendarGlobal(),
                               child: Padding(
-                                padding: const EdgeInsets.all(13),
+                                padding: const EdgeInsets.all(18),
                                 child: Icon(
                                   Icons.calendar_month_rounded,
-                                  size: 24,
+                                  size: 28,
                                   color: navSelectedColor,
                                 ),
                               ),
@@ -269,7 +269,7 @@ class _NavBtn extends StatelessWidget {
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeInOut,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
         color: isSelected
             ? (isDark
@@ -280,7 +280,7 @@ class _NavBtn extends StatelessWidget {
       ),
       child: Icon(
         icon,
-        size: 22,
+        size: 26,
         color: isSelected ? selectedColor : unselectedColor,
       ),
     ),
