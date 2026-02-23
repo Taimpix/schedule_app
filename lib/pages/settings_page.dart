@@ -29,22 +29,27 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  Group? _selectedGroup;
-  Teacher? _selectedTeacher;
+  // Выбор хранится в репозитории, локальный стейт не нужен
 
   Future<void> _openGroupSearch() async {
     final repo = ScheduleRepository.instance;
-    final groups = repo.groups;
-    if (groups.isEmpty) return;
+    if (repo.groups.isEmpty) {
+      await _showNoDataDialog(
+        title: 'Список недоступен',
+        message: 'Не удалось загрузить список групп.\nПроверьте подключение к интернету.',
+        onRetry: () => repo.refresh(),
+      );
+      return;
+    }
 
     await Navigator.of(context).push(PageRouteBuilder(
       opaque: false,
       barrierColor: Colors.black.withOpacity(0.35),
       pageBuilder: (_, __, ___) => _GroupSearchPage(
-        groups: groups,
-        selected: _selectedGroup,
+        groups: repo.groups,
+        selected: repo.selectedGroup,
         onSelected: (g) {
-          setState(() => _selectedGroup = g);
+          repo.saveSelectedGroup(g);
           Navigator.pop(context);
         },
       ),
@@ -58,17 +63,23 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _openTeacherSearch() async {
     final repo = ScheduleRepository.instance;
-    final teachers = repo.teachers;
-    if (teachers.isEmpty) return;
+    if (repo.teachers.isEmpty) {
+      await _showNoDataDialog(
+        title: 'Список недоступен',
+        message: 'Не удалось загрузить список преподавателей.\nПроверьте подключение к интернету.',
+        onRetry: () => repo.refresh(),
+      );
+      return;
+    }
 
     await Navigator.of(context).push(PageRouteBuilder(
       opaque: false,
       barrierColor: Colors.black.withOpacity(0.35),
       pageBuilder: (_, __, ___) => _TeacherSearchPage(
-        teachers: teachers,
-        selected: _selectedTeacher,
+        teachers: repo.teachers,
+        selected: repo.selectedTeacher,
         onSelected: (t) {
-          setState(() => _selectedTeacher = t);
+          repo.saveSelectedTeacher(t);
           Navigator.pop(context);
         },
       ),
@@ -78,6 +89,31 @@ class _SettingsPageState extends State<SettingsPage> {
         child: child,
       ),
     ));
+  }
+
+  Future<void> _showNoDataDialog({
+    required String title,
+    required String message,
+    required VoidCallback onRetry,
+  }) async {
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      barrierColor: Colors.black.withOpacity(0.40),
+      transitionDuration: const Duration(milliseconds: 260),
+      transitionBuilder: (context, anim, _, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+          child: FadeTransition(opacity: anim, child: child),
+        );
+      },
+      pageBuilder: (context, _, __) => _LiquidGlassDialog(
+        title: title,
+        message: message,
+        onRetry: onRetry,
+      ),
+    );
   }
 
   Future<void> _openColorPicker() async {
@@ -162,9 +198,8 @@ class _SettingsPageState extends State<SettingsPage> {
               builder: (context, _) {
                 final repo = ScheduleRepository.instance;
 
-                // Показываем ошибку, если она есть и данных нет
                 if (repo.error != null && !repo.hasData)
-                  return _ErrorCard(
+                  _ErrorCard(
                     message: repo.error!,
                     seed: seed,
                     textPrimary: textPrimary,
@@ -172,32 +207,35 @@ class _SettingsPageState extends State<SettingsPage> {
                   );
 
                 return _GlassCard(bg: cardBg, border: cardBorder, children: [
-                  // Баннер ошибки поверх старых данных
-                  if (repo.error != null)
-                    _InlineBanner(message: repo.error!, seed: seed),
+                  // Баннер ошибки только если данных вообще нет
+                  if (repo.error != null && !repo.hasData)
+                    _InlineBanner(message: repo.error!, seed: seed,
+                        onRetry: () => repo.refresh()),
 
                   // Группа
                   _SelectTile(
                     icon: Icons.group_rounded,
                     title: 'Группа',
-                    value: _selectedGroup?.name ?? '—',
-                    isEmpty: _selectedGroup == null,
+                    value: repo.selectedGroup?.name ?? '—',
+                    isEmpty: repo.selectedGroup == null,
                     isLoading: repo.isLoading && repo.groups.isEmpty,
                     textPrimary: textPrimary,
                     seed: seed,
-                    onTap: repo.groups.isEmpty ? null : _openGroupSearch,
+                    // Разрешаем нажать даже при ошибке если список пуст —
+                    // в этом случае просто не открываем, а показываем снекбар
+                    onTap: repo.isLoading ? null : _openGroupSearch,
                   ),
                   div(),
                   // Преподаватель
                   _SelectTile(
                     icon: Icons.person_rounded,
                     title: 'Преподаватель',
-                    value: _selectedTeacher?.name ?? '—',
-                    isEmpty: _selectedTeacher == null,
+                    value: repo.selectedTeacher?.name ?? '—',
+                    isEmpty: repo.selectedTeacher == null,
                     isLoading: repo.isLoading && repo.teachers.isEmpty,
                     textPrimary: textPrimary,
                     seed: seed,
-                    onTap: repo.teachers.isEmpty ? null : _openTeacherSearch,
+                    onTap: repo.isLoading ? null : _openTeacherSearch,
                   ),
                 ]);
               },
@@ -1010,13 +1048,18 @@ class _ErrorCard extends StatelessWidget {
   }
 }
 
-// ── Баннер ошибки поверх устаревших данных ───────────────────────
+// ── Баннер ошибки с кнопкой повтора ─────────────────────────────
 
 class _InlineBanner extends StatelessWidget {
   final String message;
   final Color seed;
+  final VoidCallback onRetry;
 
-  const _InlineBanner({required this.message, required this.seed});
+  const _InlineBanner({
+    required this.message,
+    required this.seed,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1029,13 +1072,20 @@ class _InlineBanner extends StatelessWidget {
         border: Border.all(color: Colors.orange.withOpacity(0.25), width: 1),
       ),
       child: Row(children: [
-        const Icon(Icons.info_outline_rounded,
-            color: Colors.orange, size: 16),
+        const Icon(Icons.wifi_off_rounded, color: Colors.orange, size: 16),
         const SizedBox(width: 8),
         Expanded(
           child: Text(message,
               style: const TextStyle(
                   fontSize: 12, color: Colors.orange, height: 1.3)),
+        ),
+        GestureDetector(
+          onTap: onRetry,
+          child: Text('Повтор',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: seed)),
         ),
       ]),
     );
@@ -1285,4 +1335,168 @@ class _ActionTile extends StatelessWidget {
       ]),
     ),
   );
+}
+
+// ══════════════════ LIQUID GLASS DIALOG ══════════════════════════
+
+class _LiquidGlassDialog extends StatelessWidget {
+  final String title;
+  final String message;
+  final VoidCallback onRetry;
+
+  const _LiquidGlassDialog({
+    required this.title,
+    required this.message,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppThemeNotifier.instance.isDark;
+    final seed = AppThemeNotifier.instance.seedColor;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1A3A5C);
+    final textSecondary = isDark ? Colors.white60 : const Color(0xFF5A7FA8);
+
+    final bgColor = isDark
+        ? Color.lerp(seed, Colors.black, 0.78)!.withOpacity(0.94)
+        : Color.lerp(seed, Colors.white, 0.72)!.withOpacity(0.94);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                color: Colors.white.withOpacity(isDark ? 0.14 : 0.70),
+                width: 1.4,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: seed.withOpacity(0.22),
+                  blurRadius: 32,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 8),
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Иконка
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
+                  child: Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(isDark ? 0.20 : 0.14),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.orange.withOpacity(0.35),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.wifi_off_rounded,
+                      color: Colors.orange,
+                      size: 26,
+                    ),
+                  ),
+                ),
+                // Заголовок
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: textPrimary,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+                // Сообщение
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                  child: Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: textSecondary,
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+                // Разделитель
+                Divider(
+                  height: 1,
+                  color: Colors.white.withOpacity(isDark ? 0.10 : 0.45),
+                ),
+                // Кнопки
+                IntrinsicHeight(
+                  child: Row(children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          color: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            'Закрыть',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
+                              color: textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    VerticalDivider(
+                      width: 1,
+                      color: Colors.white.withOpacity(isDark ? 0.10 : 0.45),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          onRetry();
+                        },
+                        child: Container(
+                          color: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            'Повторить',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: seed,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ]),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
