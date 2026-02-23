@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../data/schedule_repository.dart';
@@ -141,6 +142,12 @@ Map<DateTime, ScheduleDay> _buildDateMap(List<ScheduleDay> days) {
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});
 
+  static final globalKey = GlobalKey<_SchedulePageState>();
+
+  static void openCalendarGlobal() {
+    globalKey.currentState?._openCalendarFromOutside();
+  }
+
   @override
   State<SchedulePage> createState() => _SchedulePageState();
 }
@@ -148,6 +155,20 @@ class SchedulePage extends StatefulWidget {
 class _SchedulePageState extends State<SchedulePage> {
   // static — сохраняется при переключении вкладок
   static DateTime _selectedDate = _dateOnly(DateTime.now());
+
+  void _nextDay() =>
+      setState(() => _selectedDate = _selectedDate.add(const Duration(days: 1)));
+
+  void _prevDay() =>
+      setState(() => _selectedDate = _selectedDate.subtract(const Duration(days: 1)));
+
+  void _openCalendarFromOutside() {
+    final repo = ScheduleRepository.instance;
+    if (repo.scheduleDays.isNotEmpty) {
+      final dateMap = _buildDateMap(repo.scheduleDays);
+      _openCalendar(dateMap);
+    }
+  }
 
   // Открыть кастомный календарь
   Future<void> _openCalendar(Map<DateTime, ScheduleDay> dateMap) async {
@@ -203,7 +224,8 @@ class _SchedulePageState extends State<SchedulePage> {
             textTeacher:    textTeacher,
             selectedDate:   _selectedDate,
             dateMap:        dateMap,
-            onOpenCalendar: () => _openCalendar(dateMap),
+            onSwipeLeft:    _nextDay,
+            onSwipeRight:   _prevDay,
           ),
           Positioned(
             top: 0, left: 0, right: 0,
@@ -230,7 +252,8 @@ class _ScheduleBody extends StatelessWidget {
   final Color    textTeacher;
   final DateTime selectedDate;
   final Map<DateTime, ScheduleDay> dateMap;
-  final VoidCallback onOpenCalendar;
+  final VoidCallback onSwipeLeft;
+  final VoidCallback onSwipeRight;
 
   const _ScheduleBody({
     required this.repo,
@@ -241,7 +264,8 @@ class _ScheduleBody extends StatelessWidget {
     required this.textTeacher,
     required this.selectedDate,
     required this.dateMap,
-    required this.onOpenCalendar,
+    required this.onSwipeLeft,
+    required this.onSwipeRight,
   });
 
   @override
@@ -276,7 +300,8 @@ class _ScheduleBody extends StatelessWidget {
         textSecondary: textSecondary,
         textTeacher:   textTeacher,
         scheduleError: repo.scheduleError,
-        onOpenCalendar: onOpenCalendar,
+        onSwipeLeft:   onSwipeLeft,
+        onSwipeRight:  onSwipeRight,
       );
     }
 
@@ -302,7 +327,8 @@ class _DayView extends StatelessWidget {
   final Color        textSecondary;
   final Color        textTeacher;
   final String?      scheduleError;
-  final VoidCallback onOpenCalendar;
+  final VoidCallback onSwipeLeft;
+  final VoidCallback onSwipeRight;
 
   const _DayView({
     required this.day,
@@ -313,7 +339,8 @@ class _DayView extends StatelessWidget {
     required this.textPrimary,
     required this.textSecondary,
     required this.textTeacher,
-    required this.onOpenCalendar,
+    required this.onSwipeLeft,
+    required this.onSwipeRight,
     this.scheduleError,
   });
 
@@ -322,8 +349,13 @@ class _DayView extends StatelessWidget {
     final isToday = selectedDate == _dateOnly(DateTime.now());
     final seedHsv = HSVColor.fromColor(seed);
 
-    return Stack(children: [
-      ListView(
+    return GestureDetector(
+      onHorizontalDragEnd: (details) {
+        if (details.primaryVelocity == null) return;
+        if (details.primaryVelocity! < -200) onSwipeLeft();
+        if (details.primaryVelocity! > 200)  onSwipeRight();
+      },
+      child: ListView(
         padding: EdgeInsets.only(
           top: MediaQuery.of(context).padding.top + 76,
           bottom: 120,
@@ -408,17 +440,7 @@ class _DayView extends StatelessWidget {
             }),
         ],
       ),
-
-      // ── FAB — открыть календарь ────────────────────────────
-      Positioned(
-        right: 20,
-        bottom: MediaQuery.of(context).padding.bottom + 110,
-        child: _CalendarFab(
-          seed: seed, isDark: isDark,
-          onTap: onOpenCalendar,
-        ),
-      ),
-    ]);
+    );
   }
 }
 
@@ -1176,31 +1198,41 @@ class _LessonCard extends StatelessWidget {
     required this.textTeacher,
   });
 
+
   @override
   Widget build(BuildContext context) {
-    final bgOpacity   = isDark ? 0.20 : 0.24;
     final borderColor = isDark
-        ? Colors.white.withOpacity(0.12)
-        : Colors.white.withOpacity(0.70);
+        ? Colors.white.withOpacity(0.18)
+        : Colors.white.withOpacity(0.80);
     final timeSub = isDark
         ? Colors.white.withOpacity(0.42)
         : const Color(0xFF6A85A0);
     final roomBg = isDark
-        ? cardColor.withOpacity(0.22)
-        : cardColor.withOpacity(0.18);
+        ? Colors.white.withOpacity(0.08)
+        : Colors.white.withOpacity(0.45);
+
+    // Стабильный «матовый» цвет — не зависит от того что под ним
+    final cardBg = isDark
+        ? Color.lerp(cardColor, Colors.black, 0.55)!.withOpacity(0.72)
+        : Color.lerp(cardColor, Colors.white, 0.58)!.withOpacity(0.78);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+      child: Container(
         decoration: BoxDecoration(
-          color: cardColor.withOpacity(bgOpacity),
+          color: cardBg,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: borderColor, width: 1.4),
           boxShadow: [
             BoxShadow(
-              color: cardColor.withOpacity(isDark ? 0.08 : 0.15),
-              blurRadius: 12, offset: const Offset(0, 4),
+              color: cardColor.withOpacity(isDark ? 0.18 : 0.22),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.18 : 0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -1208,7 +1240,7 @@ class _LessonCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Время ─────────────────────────────────────────
+            // ── Время ───────────────────────────────────────
             SizedBox(
               width: 54,
               child: Column(
@@ -1231,23 +1263,22 @@ class _LessonCard extends StatelessWidget {
               ),
             ),
 
-            // ── Разделитель ───────────────────────────────────
+            // ── Разделитель ────────────────────────────────
             Container(
               width: 2,
               height: lesson.timeEnd.isNotEmpty ? 40 : 26,
               margin: const EdgeInsets.only(left: 8, right: 12, top: 2),
               decoration: BoxDecoration(
-                color: cardColor.withOpacity(isDark ? 0.85 : 0.75),
+                color: cardColor.withOpacity(isDark ? 0.90 : 0.70),
                 borderRadius: BorderRadius.circular(1),
               ),
             ),
 
-            // ── Основной блок: название + инфо + кабинет внизу ─
+            // ── Название, преподаватель, тип, кабинет ──────
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Название
                   Text(
                     lesson.subject,
                     style: TextStyle(
@@ -1256,17 +1287,13 @@ class _LessonCard extends StatelessWidget {
                       color: textPrimary,
                     ),
                   ),
-
-                  const SizedBox(height: 4),
-
-                  // Преподаватель
-                  if (lesson.teacher.isNotEmpty)
+                  if (lesson.teacher.isNotEmpty) ...[
+                    const SizedBox(height: 3),
                     Text(
                       lesson.teacher,
                       style: TextStyle(fontSize: 12, color: textTeacher),
                     ),
-
-                  // Тип занятия — курсивом
+                  ],
                   if (lesson.type.isNotEmpty) ...[
                     const SizedBox(height: 1),
                     Text(
@@ -1274,12 +1301,10 @@ class _LessonCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontStyle: FontStyle.italic,
-                        color: textTeacher.withOpacity(0.75),
+                        color: textTeacher.withOpacity(0.72),
                       ),
                     ),
                   ],
-
-                  // Кабинет — внизу, слева, отдельной строкой
                   if (lesson.room.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Container(
@@ -1291,18 +1316,16 @@ class _LessonCard extends StatelessWidget {
                         border: Border.all(
                           color: isDark
                               ? Colors.white.withOpacity(0.10)
-                              : cardColor.withOpacity(0.30),
+                              : Colors.white.withOpacity(0.60),
                           width: 1,
                         ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.room_rounded,
-                            size: 11,
-                            color: textTeacher.withOpacity(0.7),
-                          ),
+                          Icon(Icons.room_rounded,
+                              size: 11,
+                              color: textTeacher.withOpacity(0.7)),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
