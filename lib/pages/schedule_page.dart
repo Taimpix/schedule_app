@@ -214,28 +214,18 @@ class _SchedulePageState extends State<SchedulePage> {
         // Строим карту дат один раз — используется и в body, и в FAB
         final dateMap = _buildDateMap(repo.scheduleDays);
 
-        return Stack(children: [
-          _ScheduleBody(
-            repo:           repo,
-            isDark:         isDark,
-            seed:           seed,
-            textPrimary:    textPrimary,
-            textSecondary:  textSecondary,
-            textTeacher:    textTeacher,
-            selectedDate:   _selectedDate,
-            dateMap:        dateMap,
-            onSwipeLeft:    _nextDay,
-            onSwipeRight:   _prevDay,
-          ),
-          Positioned(
-            top: 0, left: 0, right: 0,
-            child: _LoadingBanner(
-              visible: repo.scheduleLoading,
-              isDark:  isDark,
-              seed:    seed,
-            ),
-          ),
-        ]);
+        return _ScheduleBody(
+          repo:           repo,
+          isDark:         isDark,
+          seed:           seed,
+          textPrimary:    textPrimary,
+          textSecondary:  textSecondary,
+          textTeacher:    textTeacher,
+          selectedDate:   _selectedDate,
+          dateMap:        dateMap,
+          onSwipeLeft:    _nextDay,
+          onSwipeRight:   _prevDay,
+        );
       },
     );
   }
@@ -1026,7 +1016,7 @@ class _ErrorPlaceholder extends StatelessWidget {
       Padding(
         padding: const EdgeInsets.only(bottom: 18, top: 8),
         child: Text('Расписание',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700,
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700,
                 color: textPrimary)),
       ),
       Container(

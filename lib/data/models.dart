@@ -68,12 +68,11 @@ class Lesson {
   });
 
   factory Lesson.fromJson(Map<String, dynamic> json) {
-    // Парсим time: '10:40-12:10' → start='10:40', end='12:10'
-    // или '9:00' → start='9:00', end=''
+    // Поддерживаем оба формата: 'time' из API/кеша и старый 'time_start'+'time_end'
     final rawTime = (json['time'] ?? '') as String;
-    final timeParts = rawTime.split(RegExp(r'[-–—]'));
-    final timeStart = timeParts.isNotEmpty ? timeParts[0].trim() : '';
-    final timeEnd   = timeParts.length > 1  ? timeParts[1].trim() : '';
+    final parts   = rawTime.split(RegExp(r'[-–—]'));
+    final timeStart = parts.isNotEmpty ? parts[0].trim() : '';
+    final timeEnd   = parts.length > 1  ? parts[1].trim() : '';
 
     return Lesson(
       timeStart: timeStart,
@@ -86,15 +85,14 @@ class Lesson {
   }
 
   Map<String, dynamic> toJson() => {
-    'time_start': timeStart,
-    'time_end':   timeEnd,
-    'subject':    subject,
-    'teacher':    teacher,
-    'room':       room,
-    'type':       type,
+    // Сохраняем time в том же формате что приходит с API
+    'time':    timeEnd.isNotEmpty ? '$timeStart-$timeEnd' : timeStart,
+    'subject': subject,
+    'teacher': teacher,
+    'room':    room,
+    'type':    type,
   };
 }
-
 
 // ── ScheduleDay ────────────────────────────────────────────────────
 

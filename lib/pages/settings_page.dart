@@ -162,11 +162,11 @@ class _SettingsPageState extends State<SettingsPage> {
             Padding(
               padding: const EdgeInsets.only(bottom: 20, top: 8),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Настройки',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700,
+                Text('Персонализация',
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700,
                         color: textPrimary)),
-                const SizedBox(height: 2),
-                Text('Персонализация приложения',
+                const SizedBox(height: 3),
+                Text('Настройте приложение так, как вам удобно',
                     style: TextStyle(fontSize: 15, color: textSecondary)),
               ]),
             ),
@@ -248,7 +248,7 @@ class _SettingsPageState extends State<SettingsPage> {
             _GlassCard(bg: cardBg, border: cardBorder, children: [
               _ActionTile(
                 icon: Icons.info_outline_rounded, title: 'Версия приложения',
-                subtitle: '1.0.0 (build 1)', textPrimary: textPrimary,
+                subtitle: '26.02 (alpha 1)', textPrimary: textPrimary,
                 textSecondary: textSecondary, seed: seed, onTap: () {},
               ),
               div(),

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
@@ -150,6 +151,20 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ),
 
+            // ── Плашка загрузки — поверх AppBar ───────────────
+            Positioned(
+              top: 0, left: 0, right: 0,
+              child: ListenableBuilder(
+                listenable: ScheduleRepository.instance,
+                builder: (_, __) => _LoadingBanner(
+                  visible: _currentIndex == 0 &&
+                      ScheduleRepository.instance.scheduleLoading,
+                  isDark: isDark,
+                  seed:   seed,
+                ),
+              ),
+            ),
+
             // ── Bottom bar: капсула слева + кнопка справа ──────
             Positioned(
               bottom: 0, left: 0, right: 0,
@@ -285,4 +300,134 @@ class _NavBtn extends StatelessWidget {
       ),
     ),
   );
+}
+
+// ── Плашка загрузки расписания ────────────────────────────────────
+
+class _LoadingBanner extends StatefulWidget {
+  final bool  visible;
+  final bool  isDark;
+  final Color seed;
+
+  const _LoadingBanner({
+    required this.visible,
+    required this.isDark,
+    required this.seed,
+  });
+
+  @override
+  State<_LoadingBanner> createState() => _LoadingBannerState();
+}
+
+class _LoadingBannerState extends State<_LoadingBanner>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    if (widget.visible) _ctrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(_LoadingBanner old) {
+    super.didUpdateWidget(old);
+    if (widget.visible != old.visible) {
+      widget.visible ? _ctrl.forward() : _ctrl.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final seed   = widget.seed;
+
+    final bgColor = isDark
+        ? Color.lerp(seed, Colors.black, 0.65)!.withOpacity(0.92)
+        : Color.lerp(seed, Colors.white, 0.45)!.withOpacity(0.92);
+    final textColor = isDark ? Colors.white : const Color(0xFF1A3A5C);
+
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) {
+        if (_ctrl.isDismissed) return const SizedBox.shrink();
+        return FadeTransition(
+          opacity: _ctrl,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, -1),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+                parent: _ctrl, curve: Curves.easeOutCubic)),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: bgColor,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white
+                                .withOpacity(isDark ? 0.15 : 0.60),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: seed.withOpacity(0.25),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 15, height: 15,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor:
+                                  AlwaysStoppedAnimation<Color>(seed),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Загрузка расписания...',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: textColor,
+                                ),
+                              ),
+                            ]),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
