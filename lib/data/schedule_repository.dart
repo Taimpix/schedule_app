@@ -40,6 +40,7 @@ class ScheduleRepository extends ChangeNotifier {
   List<ScheduleDay> _days          = [];
   bool    _scheduleLoading         = false;
   String? _scheduleError;
+  String  _lastRawResponse         = ''; // для отладки
 
   // ── Выбор ──────────────────────────────────────────────────────
   Group?   _selectedGroup;
@@ -55,6 +56,7 @@ class ScheduleRepository extends ChangeNotifier {
   List<ScheduleDay> get scheduleDays    => _days;
   bool              get scheduleLoading => _scheduleLoading;
   String?           get scheduleError   => _scheduleError;
+  String            get lastRawResponse => _lastRawResponse; // отладка
 
   Group?   get selectedGroup   => _selectedGroup;
   Teacher? get selectedTeacher => _selectedTeacher;
@@ -104,30 +106,57 @@ class ScheduleRepository extends ChangeNotifier {
 
     try {
       final url  = '$_siteBase/schedule/group/$groupName';
+      debugPrint('[Schedule] ▶ GET $url');
+
       final resp = await _dio.get<dynamic>(url);
+      debugPrint('[Schedule] ◀ status=${resp.statusCode}');
+      debugPrint('[Schedule]   data type=${resp.data?.runtimeType}');
+
       final data = resp.data;
+
+      // Логируем первые 500 символов ответа
+      if (data is String) {
+        debugPrint('[Schedule]   body(500)=${data.substring(0, data.length.clamp(0, 500))}');
+      } else {
+        debugPrint('[Schedule]   body=${data.toString().substring(0, data.toString().length.clamp(0, 500))}');
+      }
 
       List<ScheduleDay> parsed = [];
 
-      // Реальный формат API — плоский список уроков
       if (data is List) {
+        debugPrint('[Schedule]   → flat list, length=${data.length}');
+        if (data.isNotEmpty) {
+          debugPrint('[Schedule]   first item=${data.first}');
+        }
         parsed = _groupLessonsByDate(data);
+        debugPrint('[Schedule]   → grouped into ${parsed.length} days');
+        for (final d in parsed) {
+          debugPrint('[Schedule]     day date="${d.date}" lessons=${d.lessons.length}');
+        }
       } else if (data is Map) {
         final m   = data as Map<String, dynamic>;
+        debugPrint('[Schedule]   → map keys=${m.keys.toList()}');
         final key = m.containsKey('days')     ? 'days'
             : m.containsKey('schedule') ? 'schedule'
             : m.containsKey('data')     ? 'data'
             : m.containsKey('lessons')  ? 'lessons'
             : null;
+        debugPrint('[Schedule]   → picked key=$key');
         if (key != null && m[key] is List) {
           parsed = _groupLessonsByDate(m[key] as List);
+          debugPrint('[Schedule]   → grouped into ${parsed.length} days');
         }
+      } else if (data is String && data.contains('<')) {
+        debugPrint('[Schedule]   → HTML, trying parser');
+        parsed = ScheduleParser.parseHtml(data);
+        debugPrint('[Schedule]   → parsed ${parsed.length} days from HTML');
+      } else {
+        debugPrint('[Schedule]   ✗ unknown data type: ${data?.runtimeType}');
       }
 
-      // Крайний случай — HTML
-      if (parsed.isEmpty && data is String && data.contains('<')) {
-        parsed = ScheduleParser.parseHtml(data);
-      }
+      // Дополнительно сохраняем raw JSON для отладки
+      _lastRawResponse = data.toString().substring(
+          0, data.toString().length.clamp(0, 1000));
 
       if (parsed.isNotEmpty) {
         _days          = parsed;
@@ -136,17 +165,20 @@ class ScheduleRepository extends ChangeNotifier {
           '$_keySchedulePrefix$groupName',
           jsonEncode(parsed.map((d) => d.toJson()).toList()),
         );
+        debugPrint('[Schedule] ✓ saved ${parsed.length} days to cache');
       } else {
         _scheduleError =
         'Расписание для группы "$groupName" не найдено или недоступно.';
-        // Оставляем кеш, если он был
+        debugPrint('[Schedule] ✗ parsed 0 days, error set');
       }
     } on DioException catch (e) {
       _scheduleError = _scheduleFriendlyError(e);
-      debugPrint('[Repo] schedule DioException [${e.type}]: ${e.message}');
+      _lastRawResponse = 'DioException [${e.type}]: ${e.message}';
+      debugPrint('[Schedule] ✗ DioException [${e.type}]: ${e.message}');
     } catch (e, s) {
       _scheduleError = 'Ошибка загрузки расписания.';
-      debugPrint('[Repo] schedule error: $e\n$s');
+      _lastRawResponse = 'Exception: $e';
+      debugPrint('[Schedule] ✗ unexpected: $e\n$s');
     } finally {
       _scheduleLoading = false;
       notifyListeners();
@@ -304,9 +336,9 @@ class ScheduleRepository extends ChangeNotifier {
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.receiveTimeout:
-        return 'Сервер не отвечает. Показано кешированное расписание.';
+        return 'Сервер не отвечает. Показано сохранённое расписание.';
       case DioExceptionType.connectionError:
-        return 'Нет интернета. Показано кешированное расписание.';
+        return 'Нет интернета. Показано сохранённое расписание.';
       default:
         return 'Не удалось обновить расписание.';
     }

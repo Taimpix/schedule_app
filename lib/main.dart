@@ -118,7 +118,11 @@ class _MainScreenState extends State<MainScreen> {
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 280),
               child: _currentIndex == 0
-                  ? SchedulePage(key: SchedulePage.globalKey)
+                  ? Builder(builder: (_) {
+                SchedulePage.onNavigateToSettings =
+                    () => setState(() => _currentIndex = 1);
+                return SchedulePage(key: SchedulePage.globalKey);
+              })
                   : const SettingsPage(key: ValueKey(1)),
             ),
 

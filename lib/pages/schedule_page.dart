@@ -148,6 +148,9 @@ class SchedulePage extends StatefulWidget {
     globalKey.currentState?._openCalendarFromOutside();
   }
 
+  // Коллбэк для перехода в настройки — регистрируется из main.dart
+  static VoidCallback? onNavigateToSettings;
+
   @override
   State<SchedulePage> createState() => _SchedulePageState();
 }
@@ -266,6 +269,7 @@ class _ScheduleBody extends StatelessWidget {
       return _NoGroupPlaceholder(
         topPad: topPad, seed: seed, isDark: isDark,
         textPrimary: textPrimary, textSecondary: textSecondary,
+        onGoToSettings: SchedulePage.onNavigateToSettings,
       );
     }
 
@@ -401,7 +405,13 @@ class _DayView extends StatelessWidget {
 
           // ── Ошибка обновления ──────────────────────────────
           if (scheduleError != null) ...[
-            _ErrorBanner(message: scheduleError!, isDark: isDark, seed: seed),
+            _ErrorBanner(
+              message: scheduleError!,
+              isDark: isDark,
+              seed: seed,
+              onRetry: () => ScheduleRepository.instance
+                  .fetchSchedule(groupName),
+            ),
             const SizedBox(height: 12),
           ],
 
@@ -492,181 +502,188 @@ class _CalendarDialogState extends State<_CalendarDialog> {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Material(
           color: Colors.transparent,
-          child: Container(
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: Colors.white.withOpacity(isDark ? 0.14 : 0.65),
-                width: 1.4,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: seed.withOpacity(0.25),
-                  blurRadius: 32, spreadRadius: 2,
-                  offset: const Offset(0, 8),
+          child: GestureDetector(
+            onHorizontalDragEnd: (details) {
+              if (details.primaryVelocity == null) return;
+              if (details.primaryVelocity! < -200) _nextMonth();
+              if (details.primaryVelocity! > 200)  _prevMonth();
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: Colors.white.withOpacity(isDark ? 0.14 : 0.65),
+                  width: 1.4,
                 ),
-              ],
-            ),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              // ── Шапка месяца ─────────────────────────────────
-              Row(children: [
-                _MonthNavBtn(
-                  icon: Icons.chevron_left_rounded,
-                  color: textSecondary,
-                  onTap: _prevMonth,
-                ),
-                Expanded(
-                  child: Text(
-                    '${_kMonths[_viewing.month].capitalize()} ${_viewing.year}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: textPrimary,
-                    ),
+                boxShadow: [
+                  BoxShadow(
+                    color: seed.withOpacity(0.25),
+                    blurRadius: 32, spreadRadius: 2,
+                    offset: const Offset(0, 8),
                   ),
-                ),
-                _MonthNavBtn(
-                  icon: Icons.chevron_right_rounded,
-                  color: textSecondary,
-                  onTap: _nextMonth,
-                ),
-              ]),
-
-              const SizedBox(height: 12),
-
-              // ── Дни недели ────────────────────────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
-                    .map((d) => SizedBox(
-                  width: 36,
-                  child: Text(d,
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                // ── Шапка месяца ─────────────────────────────────
+                Row(children: [
+                  _MonthNavBtn(
+                    icon: Icons.chevron_left_rounded,
+                    color: textSecondary,
+                    onTap: _prevMonth,
+                  ),
+                  Expanded(
+                    child: Text(
+                      '${_kMonths[_viewing.month].capitalize()} ${_viewing.year}',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: textSecondary)),
-                ))
-                    .toList(),
-              ),
-
-              const SizedBox(height: 8),
-
-              // ── Сетка дней ───────────────────────────────────
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 7,
-                  childAspectRatio: 1,
-                  mainAxisSpacing: 4,
-                  crossAxisSpacing: 0,
-                ),
-                itemCount: startOffset + daysCount,
-                itemBuilder: (_, i) {
-                  if (i < startOffset) return const SizedBox();
-                  final day = DateTime(
-                      _viewing.year, _viewing.month, i - startOffset + 1);
-                  final isSel   = _isSelected(day);
-                  final isToday = _isToday(day);
-                  final hasL    = _hasLesson(day);
-
-                  return GestureDetector(
-                    onTap: () => setState(
-                          () => _selected = _dateOnly(day),
-                    ),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      margin: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: isSel
-                            ? seed
-                            : isToday
-                            ? seed.withOpacity(0.18)
-                            : Colors.transparent,
-                        shape: BoxShape.circle,
-                        border: isToday && !isSel
-                            ? Border.all(color: seed.withOpacity(0.5), width: 1.5)
-                            : null,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: textPrimary,
                       ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Text(
-                            '${day.day}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: isSel || isToday
-                                  ? FontWeight.w700
-                                  : FontWeight.w400,
-                              color: isSel
-                                  ? Colors.white
-                                  : hasL
-                                  ? textPrimary
-                                  : textSecondary.withOpacity(0.5),
-                            ),
-                          ),
-                          // Точка = есть занятия в этот день
-                          if (hasL && !isSel)
-                            Positioned(
-                              bottom: 3,
-                              child: Container(
-                                width: 4, height: 4,
-                                decoration: BoxDecoration(
-                                  color: seed,
-                                  shape: BoxShape.circle,
-                                ),
+                    ),
+                  ),
+                  _MonthNavBtn(
+                    icon: Icons.chevron_right_rounded,
+                    color: textSecondary,
+                    onTap: _nextMonth,
+                  ),
+                ]),
+
+                const SizedBox(height: 12),
+
+                // ── Дни недели ────────────────────────────────────
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
+                      .map((d) => SizedBox(
+                    width: 36,
+                    child: Text(d,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: textSecondary)),
+                  ))
+                      .toList(),
+                ),
+
+                const SizedBox(height: 8),
+
+                // ── Сетка дней ───────────────────────────────────
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 7,
+                    childAspectRatio: 1,
+                    mainAxisSpacing: 4,
+                    crossAxisSpacing: 0,
+                  ),
+                  itemCount: startOffset + daysCount,
+                  itemBuilder: (_, i) {
+                    if (i < startOffset) return const SizedBox();
+                    final day = DateTime(
+                        _viewing.year, _viewing.month, i - startOffset + 1);
+                    final isSel   = _isSelected(day);
+                    final isToday = _isToday(day);
+                    final hasL    = _hasLesson(day);
+
+                    return GestureDetector(
+                      onTap: () => setState(
+                            () => _selected = _dateOnly(day),
+                      ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        margin: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: isSel
+                              ? seed
+                              : isToday
+                              ? seed.withOpacity(0.18)
+                              : Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: isToday && !isSel
+                              ? Border.all(color: seed.withOpacity(0.5), width: 1.5)
+                              : null,
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Text(
+                              '${day.day}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: isSel || isToday
+                                    ? FontWeight.w700
+                                    : FontWeight.w400,
+                                color: isSel
+                                    ? Colors.white
+                                    : hasL
+                                    ? textPrimary
+                                    : textSecondary.withOpacity(0.5),
                               ),
                             ),
-                        ],
+                            // Точка = есть занятия в этот день
+                            if (hasL && !isSel)
+                              Positioned(
+                                bottom: 3,
+                                child: Container(
+                                  width: 4, height: 4,
+                                  decoration: BoxDecoration(
+                                    color: seed,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 8),
+                Divider(color: Colors.white.withOpacity(isDark ? 0.10 : 0.45)),
+
+                // ── Кнопки ──────────────────────────────────────
+                Row(children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Text('Отмена',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 15, color: textSecondary)),
                       ),
                     ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 8),
-              Divider(color: Colors.white.withOpacity(isDark ? 0.10 : 0.45)),
-
-              // ── Кнопки ──────────────────────────────────────
-              Row(children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Text('Отмена',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontSize: 15, color: textSecondary)),
+                  ),
+                  Container(
+                    width: 1, height: 36,
+                    color: Colors.white.withOpacity(isDark ? 0.10 : 0.45),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context, _selected),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Text('Выбрать',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: seed)),
+                      ),
                     ),
                   ),
-                ),
-                Container(
-                  width: 1, height: 36,
-                  color: Colors.white.withOpacity(isDark ? 0.10 : 0.45),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context, _selected),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Text('Выбрать',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: seed)),
-                    ),
-                  ),
-                ),
+                ]),
               ]),
-            ]),
-          ),
+            ),        // Container
+          ),        // GestureDetector
         ),
       ),
     );
@@ -863,9 +880,11 @@ class _LoadingBannerState extends State<_LoadingBanner>
 class _NoGroupPlaceholder extends StatelessWidget {
   final double topPad; final Color seed; final bool isDark;
   final Color textPrimary, textSecondary;
+  final VoidCallback? onGoToSettings;
   const _NoGroupPlaceholder({
     required this.topPad, required this.seed, required this.isDark,
     required this.textPrimary, required this.textSecondary,
+    this.onGoToSettings,
   });
 
   @override
@@ -913,21 +932,24 @@ class _NoGroupPlaceholder extends StatelessWidget {
                 height: 1.45),
           ),
           const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              color: seed.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: seed.withOpacity(0.3), width: 1),
+          GestureDetector(
+            onTap: onGoToSettings,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: seed.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: seed.withOpacity(0.3), width: 1),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.settings_rounded, size: 16, color: seed),
+                const SizedBox(width: 8),
+                Text('Настройки → Расписание',
+                    style: TextStyle(fontSize: 13,
+                        fontWeight: FontWeight.w600, color: seed)),
+              ]),
             ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.settings_rounded, size: 16, color: seed),
-              const SizedBox(width: 8),
-              Text('Настройки → Расписание',
-                  style: TextStyle(fontSize: 13,
-                      fontWeight: FontWeight.w600, color: seed)),
-            ]),
           ),
         ]),
       ),
@@ -1146,9 +1168,16 @@ class _EmptyDay extends StatelessWidget {
 // ── Баннер ошибки обновления ──────────────────────────────────────
 
 class _ErrorBanner extends StatelessWidget {
-  final String message; final bool isDark; final Color seed;
+  final String message;
+  final bool isDark;
+  final Color seed;
+  final VoidCallback? onRetry;
+
   const _ErrorBanner({
-    required this.message, required this.isDark, required this.seed,
+    required this.message,
+    required this.isDark,
+    required this.seed,
+    this.onRetry,
   });
 
   @override
@@ -1169,6 +1198,30 @@ class _ErrorBanner extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 12, color: Colors.orange, height: 1.3)),
       ),
+      if (onRetry != null) ...[
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: onRetry,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                  color: Colors.orange.withOpacity(0.35), width: 1),
+            ),
+            child: const Text(
+              'Повторить',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.orange,
+              ),
+            ),
+          ),
+        ),
+      ],
     ]),
   );
 }
