@@ -248,7 +248,7 @@ class _SettingsPageState extends State<SettingsPage> {
             _GlassCard(bg: cardBg, border: cardBorder, children: [
               _ActionTile(
                 icon: Icons.info_outline_rounded, title: 'Версия приложения',
-                subtitle: '26.02 (alpha 1)', textPrimary: textPrimary,
+                subtitle: '26.03 (beta)', textPrimary: textPrimary,
                 textSecondary: textSecondary, seed: seed, onTap: () {},
               ),
               div(),
