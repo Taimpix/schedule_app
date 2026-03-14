@@ -27,7 +27,7 @@
 ### Android
 
 Выбор версии приложения зависит только от разрядности вашей системы.
-Попробуйте установить для начала версию которая начинается на [app-64bit](https://github.com/Taimpix/schedule_app/releases/download/alpha/app-64bit-v26.02.alpha.1.apk) если она у вас не заработает, то установите версию [app-32bit](https://github.com/Taimpix/schedule_app/releases/download/alpha/app-32bit-v26.02.alpha.1.apk) и всё, приятного использования.
+Попробуйте установить для начала версию которая начинается на [app-arm64-v8a](https://github.com/Taimpix/schedule_app/releases/download/beta/app-arm64-v8a-release-v26.03-beta.apk) если она у вас не заработает, то установите версию [app-armabi-v7a](https://github.com/Taimpix/schedule_app/releases/download/beta/app-armeabi-v7a-release-v26.03-beta.apk) и всё, приятного использования.
 
 ### iOS
 
@@ -39,5 +39,5 @@
 5) В панели задач выберите иконку AltServer -> Install AltStore -> выберите ваше устройство -> войдите в свой аккаунт AppleID
 6) На вашем устройстве откройте Найстройки -> Основные -> VPN и управление устройством -> ПО разработчика -> Доверять
 7) Включить режим розработчика, следуйте шагам с фотографии (iOS 16+) ![ну вот так короче](https://github.com/user-attachments/assets/030fe5d9-53b5-45dd-ba34-b2c8192fc399)
-8) Скачайте на ваше устройство [установочный файл](https://github.com/Taimpix/schedule_app/releases/download/alpha/app-ios-v26.02.alpha.1.ipa) нажмите поделиться и выберете AltStore, подождите пока приложение установиться.
+8) Скачайте на ваше устройство [установочный файл](https://github.com/Taimpix/schedule_app/releases/download/beta/app-ipa-v26.03-beta.ipa) нажмите поделиться и выберете AltStore, подождите пока приложение установиться.
 9) Приложение можно использовать, но раз в неделю нужно подписывать занаво через приложение AltStore
