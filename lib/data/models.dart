@@ -57,6 +57,7 @@ class Lesson {
   final String teacher;
   final String room;
   final String type;
+  final String group;
 
   const Lesson({
     required this.timeStart,
@@ -64,13 +65,13 @@ class Lesson {
     required this.subject,
     required this.teacher,
     required this.room,
-    this.type = '',
+    this.type  = '',
+    this.group = '',
   });
 
   factory Lesson.fromJson(Map<String, dynamic> json) {
-    // Поддерживаем оба формата: 'time' из API/кеша и старый 'time_start'+'time_end'
-    final rawTime = (json['time'] ?? '') as String;
-    final parts   = rawTime.split(RegExp(r'[-–—]'));
+    final rawTime   = (json['time'] ?? '') as String;
+    final parts     = rawTime.split(RegExp(r'[-–—]'));
     final timeStart = parts.isNotEmpty ? parts[0].trim() : '';
     final timeEnd   = parts.length > 1  ? parts[1].trim() : '';
 
@@ -81,16 +82,17 @@ class Lesson {
       teacher:   (json['teacher']   ?? '') as String,
       room:      (json['classroom'] ?? json['room']    ?? '') as String,
       type:      (json['type']      ?? '') as String,
+      group:     (json['group']     ?? '') as String,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    // Сохраняем time в том же формате что приходит с API
     'time':    timeEnd.isNotEmpty ? '$timeStart-$timeEnd' : timeStart,
     'subject': subject,
     'teacher': teacher,
     'room':    room,
     'type':    type,
+    'group':   group,
   };
 }
 

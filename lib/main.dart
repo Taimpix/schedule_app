@@ -6,6 +6,7 @@ import 'theme/app_theme.dart';
 import 'data/schedule_repository.dart';
 import 'pages/schedule_page.dart';
 import 'pages/settings_page.dart';
+import 'pages/teacher_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -117,13 +118,17 @@ class _MainScreenState extends State<MainScreen> {
             // ── Страницы ──────────────────────────────────────
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 280),
-              child: _currentIndex == 0
-                  ? Builder(builder: (_) {
-                SchedulePage.onNavigateToSettings =
-                    () => setState(() => _currentIndex = 1);
-                return SchedulePage(key: SchedulePage.globalKey);
-              })
-                  : const SettingsPage(key: ValueKey(1)),
+              child: switch (_currentIndex) {
+                0 => Builder(builder: (_) {
+                  SchedulePage.onNavigateToSettings =
+                      () => setState(() => _currentIndex = 2);
+                  TeacherPage.onNavigateToSettings =
+                      () => setState(() => _currentIndex = 2);
+                  return SchedulePage(key: SchedulePage.globalKey);
+                }),
+                1 => TeacherPage(key: TeacherPage.globalKey),
+                _ => const SettingsPage(key: ValueKey(2)),
+              },
             ),
 
             // ── AppBar: капсула по центру ──────────────────────
@@ -140,7 +145,11 @@ class _MainScreenState extends State<MainScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 32, vertical: 13),
                         child: Text(
-                          _currentIndex == 0 ? 'Расписание' : 'Настройки',
+                          switch (_currentIndex) {
+                            0 => 'Группа',
+                            1 => 'Преподаватель',
+                            _ => 'Настройки',
+                          },
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w600,
@@ -160,12 +169,18 @@ class _MainScreenState extends State<MainScreen> {
               top: 0, left: 0, right: 0,
               child: ListenableBuilder(
                 listenable: ScheduleRepository.instance,
-                builder: (_, __) => _LoadingBanner(
-                  visible: _currentIndex == 0 &&
-                      ScheduleRepository.instance.scheduleLoading,
-                  isDark: isDark,
-                  seed:   seed,
-                ),
+                builder: (_, __) {
+                  final repo    = ScheduleRepository.instance;
+                  final loading = _currentIndex == 0
+                      ? repo.scheduleLoading
+                      : _currentIndex == 1
+                      ? repo.teacherLoading
+                      : false;
+                  return _LoadingBanner(
+                    visible: loading,
+                    isDark: isDark, seed: seed,
+                  );
+                },
               ),
             ),
 
@@ -179,7 +194,7 @@ class _MainScreenState extends State<MainScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Навкапсула
+                      // Навкапсула — 3 кнопки
                       LiquidGlass.withOwnLayer(
                         settings: glassSettings,
                         shape: LiquidRoundedSuperellipse(borderRadius: 50),
@@ -198,29 +213,44 @@ class _MainScreenState extends State<MainScreen> {
                               ),
                               const SizedBox(width: 4),
                               _NavBtn(
-                                icon: Icons.settings_rounded,
+                                icon: Icons.person_rounded,
                                 isSelected: _currentIndex == 1,
                                 selectedColor: navSelectedColor,
                                 unselectedColor: navIconColor,
                                 isDark: isDark,
                                 onTap: () => setState(() => _currentIndex = 1),
                               ),
+                              const SizedBox(width: 4),
+                              _NavBtn(
+                                icon: Icons.settings_rounded,
+                                isSelected: _currentIndex == 2,
+                                selectedColor: navSelectedColor,
+                                unselectedColor: navIconColor,
+                                isDark: isDark,
+                                onTap: () => setState(() => _currentIndex = 2),
+                              ),
                             ],
                           ),
                         ),
                       ),
 
-                      // Кнопка календаря (только на вкладке расписания)
+                      // Кнопка календаря (на вкладках 0 и 1)
                       AnimatedOpacity(
-                        opacity: _currentIndex == 0 ? 1.0 : 0.0,
+                        opacity: _currentIndex < 2 ? 1.0 : 0.0,
                         duration: const Duration(milliseconds: 200),
                         child: IgnorePointer(
-                          ignoring: _currentIndex != 0,
+                          ignoring: _currentIndex >= 2,
                           child: LiquidGlass.withOwnLayer(
                             settings: glassSettings,
                             shape: LiquidRoundedSuperellipse(borderRadius: 50),
                             child: GestureDetector(
-                              onTap: () => SchedulePage.openCalendarGlobal(),
+                              onTap: () {
+                                if (_currentIndex == 0) {
+                                  SchedulePage.openCalendarGlobal();
+                                } else {
+                                  TeacherPage.openCalendarGlobal();
+                                }
+                              },
                               child: Padding(
                                 padding: const EdgeInsets.all(21),
                                 child: Icon(
@@ -288,14 +318,15 @@ class _NavBtn extends StatelessWidget {
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeInOut,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      width: 50,
+      height: 50,
       decoration: BoxDecoration(
         color: isSelected
             ? (isDark
             ? Colors.white.withOpacity(0.20)
             : Colors.black.withOpacity(0.10))
             : Colors.transparent,
-        borderRadius: BorderRadius.circular(30),
+        shape: BoxShape.circle,
       ),
       child: Icon(
         icon,

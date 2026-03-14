@@ -6,15 +6,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 import 'schedule_parser.dart';
 
-const _apiBase     = 'https://redoc.zukl.ru';
+const _apiBase     = 'https://zukl.ru';
 const _siteBase    = 'https://zukl.ru';
 
-const _keyGroups          = 'cached_groups';
-const _keyTeachers        = 'cached_teachers';
-const _keyLoaded          = 'data_loaded';
-const _keySelectedGroupId = 'selected_group_id';
-const _keySelectedTeacherId = 'selected_teacher_id';
-const _keySchedulePrefix  = 'schedule_';  // + groupName
+const _keyGroups               = 'cached_groups';
+const _keyTeachers             = 'cached_teachers';
+const _keyLoaded               = 'data_loaded';
+const _keySelectedGroupId      = 'selected_group_id';
+const _keySelectedTeacherId    = 'selected_teacher_id';
+const _keySchedulePrefix       = 'schedule_';         // + groupName
+const _keyTeacherSchedulePrefix= 'teacher_schedule_'; // + teacherName
 
 class ScheduleRepository extends ChangeNotifier {
   static final ScheduleRepository instance = ScheduleRepository._();
@@ -36,11 +37,16 @@ class ScheduleRepository extends ChangeNotifier {
   bool    _catalogLoading = false;
   String? _catalogError;
 
-  // ── Расписание ─────────────────────────────────────────────────
+  // ── Расписание по группе ───────────────────────────────────────
   List<ScheduleDay> _days          = [];
   bool    _scheduleLoading         = false;
   String? _scheduleError;
-  String  _lastRawResponse         = ''; // для отладки
+  String  _lastRawResponse         = '';
+
+  // ── Расписание по преподавателю ────────────────────────────────
+  List<ScheduleDay> _teacherDays    = [];
+  bool    _teacherLoading           = false;
+  String? _teacherError;
 
   // ── Выбор ──────────────────────────────────────────────────────
   Group?   _selectedGroup;
@@ -56,7 +62,11 @@ class ScheduleRepository extends ChangeNotifier {
   List<ScheduleDay> get scheduleDays    => _days;
   bool              get scheduleLoading => _scheduleLoading;
   String?           get scheduleError   => _scheduleError;
-  String            get lastRawResponse => _lastRawResponse; // отладка
+  String            get lastRawResponse => _lastRawResponse;
+
+  List<ScheduleDay> get teacherDays    => _teacherDays;
+  bool              get teacherLoading => _teacherLoading;
+  String?           get teacherError   => _teacherError;
 
   Group?   get selectedGroup   => _selectedGroup;
   Teacher? get selectedTeacher => _selectedTeacher;
@@ -83,8 +93,13 @@ class ScheduleRepository extends ChangeNotifier {
     // Если группа выбрана — сначала показываем кеш, потом обновляем
     if (_selectedGroup != null) {
       await _loadScheduleFromCache(prefs, _selectedGroup!.name);
-      // Фоновое обновление
       fetchSchedule(_selectedGroup!.name);
+    }
+
+    // Если преподаватель выбран — аналогично
+    if (_selectedTeacher != null) {
+      await _loadTeacherScheduleFromCache(prefs, _selectedTeacher!.name);
+      fetchTeacherSchedule(_selectedTeacher!.name);
     }
   }
 
@@ -205,12 +220,97 @@ class ScheduleRepository extends ChangeNotifier {
 
   Future<void> saveSelectedTeacher(Teacher? teacher) async {
     _selectedTeacher = teacher;
+    _teacherDays     = [];
+    _teacherError    = null;
     notifyListeners();
+
     final prefs = await SharedPreferences.getInstance();
     if (teacher == null) {
       await prefs.remove(_keySelectedTeacherId);
     } else {
       await prefs.setInt(_keySelectedTeacherId, teacher.id);
+      await _loadTeacherScheduleFromCache(prefs, teacher.name);
+      fetchTeacherSchedule(teacher.name); // фон
+    }
+  }
+
+  /// Загрузить расписание для преподавателя.
+  Future<void> fetchTeacherSchedule(String teacherName) async {
+    if (teacherName.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+
+    _teacherLoading = true;
+    _teacherError   = null;
+    notifyListeners();
+
+    try {
+      final url  = '$_siteBase/schedule/teacher/$teacherName';
+      final resp = await _dio.get<dynamic>(url);
+      final data = resp.data;
+
+      List<ScheduleDay> parsed = [];
+
+      if (data is List) {
+        parsed = _groupLessonsByDate(data);
+      } else if (data is Map) {
+        final m   = data as Map<String, dynamic>;
+        final key = m.containsKey('days')     ? 'days'
+            : m.containsKey('schedule') ? 'schedule'
+            : m.containsKey('data')     ? 'data'
+            : m.containsKey('lessons')  ? 'lessons'
+            : null;
+        if (key != null && m[key] is List) {
+          parsed = _groupLessonsByDate(m[key] as List);
+        }
+      } else if (data is String && data.contains('<')) {
+        parsed = ScheduleParser.parseHtml(data);
+      }
+
+      if (parsed.isNotEmpty) {
+        _teacherDays  = parsed;
+        _teacherError = null;
+        await prefs.setString(
+          '$_keyTeacherSchedulePrefix$teacherName',
+          jsonEncode(parsed.map((d) => d.toJson()).toList()),
+        );
+      } else {
+        _teacherError =
+        'Расписание для "$teacherName" не найдено или недоступно.';
+      }
+    } on DioException catch (e) {
+      _teacherError = _teacherFriendlyError(e);
+    } catch (e) {
+      _teacherError = 'Ошибка загрузки расписания.';
+    } finally {
+      _teacherLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _loadTeacherScheduleFromCache(
+      SharedPreferences prefs, String teacherName) async {
+    try {
+      final raw = prefs.getString('$_keyTeacherSchedulePrefix$teacherName');
+      if (raw != null) {
+        _teacherDays = (jsonDecode(raw) as List)
+            .map((e) => ScheduleDay.fromJson(e as Map<String, dynamic>))
+            .toList();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[Repo] teacher schedule cache error: $e');
+    }
+  }
+
+  String _teacherFriendlyError(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'Сервер не отвечает. Показано сохранённое расписание.';
+      case DioExceptionType.connectionError:
+        return 'Нет интернета. Показано сохранённое расписание.';
+      default:
+        return 'Не удалось обновить расписание.';
     }
   }
 
