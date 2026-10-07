@@ -162,11 +162,11 @@ class _SettingsPageState extends State<SettingsPage> {
             Padding(
               padding: const EdgeInsets.only(bottom: 20, top: 8),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Персонализация',
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700,
+                Text('Настройки',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700,
                         color: textPrimary)),
-                const SizedBox(height: 3),
-                Text('Настройте приложение так, как вам удобно',
+                const SizedBox(height: 2),
+                Text('Персонализация приложения',
                     style: TextStyle(fontSize: 15, color: textSecondary)),
               ]),
             ),
@@ -192,27 +192,78 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 16),
 
             // ── Расписание ──────────────────────────────────────
-            _SectionLabel('Расписание', textSecondary),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: Text(
+                      'РАСПИСАНИЕ',
+                      style: TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w700,
+                        color: textSecondary, letterSpacing: 1.1,
+                      ),
+                    ),
+                  ),
+                  ListenableBuilder(
+                    listenable: ScheduleRepository.instance,
+                    builder: (_, __) {
+                      final repo = ScheduleRepository.instance;
+                      return GestureDetector(
+                        onTap: repo.isLoading ? null : () => repo.refresh(),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: repo.isLoading
+                                ? seed.withOpacity(0.08)
+                                : seed.withOpacity(0.13),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: seed.withOpacity(0.25),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            repo.isLoading
+                                ? SizedBox(
+                              width: 12, height: 12,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.8,
+                                valueColor:
+                                AlwaysStoppedAnimation<Color>(seed),
+                              ),
+                            )
+                                : Icon(Icons.refresh_rounded,
+                                size: 13, color: seed),
+                            const SizedBox(width: 5),
+                            Text(
+                              repo.isLoading ? 'Загрузка...' : 'Обновить',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: seed,
+                              ),
+                            ),
+                          ]),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
             ListenableBuilder(
               listenable: ScheduleRepository.instance,
               builder: (context, _) {
                 final repo = ScheduleRepository.instance;
-
-                if (repo.error != null && !repo.hasData)
-                  _ErrorCard(
-                    message: repo.error!,
-                    seed: seed,
-                    textPrimary: textPrimary,
-                    onRetry: () => repo.refresh(),
-                  );
-
                 return _GlassCard(bg: cardBg, border: cardBorder, children: [
-                  // Баннер ошибки только если данных вообще нет
                   if (repo.error != null && !repo.hasData)
                     _InlineBanner(message: repo.error!, seed: seed,
                         onRetry: () => repo.refresh()),
-
-                  // Группа
                   _SelectTile(
                     icon: Icons.group_rounded,
                     title: 'Группа',
@@ -221,12 +272,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     isLoading: repo.isLoading && repo.groups.isEmpty,
                     textPrimary: textPrimary,
                     seed: seed,
-                    // Разрешаем нажать даже при ошибке если список пуст —
-                    // в этом случае просто не открываем, а показываем снекбар
                     onTap: repo.isLoading ? null : _openGroupSearch,
                   ),
                   div(),
-                  // Преподаватель
                   _SelectTile(
                     icon: Icons.person_rounded,
                     title: 'Преподаватель',
@@ -248,7 +296,7 @@ class _SettingsPageState extends State<SettingsPage> {
             _GlassCard(bg: cardBg, border: cardBorder, children: [
               _ActionTile(
                 icon: Icons.info_outline_rounded, title: 'Версия приложения',
-                subtitle: '26.03 (beta)', textPrimary: textPrimary,
+                subtitle: '1.0.0 (build 1)', textPrimary: textPrimary,
                 textSecondary: textSecondary, seed: seed, onTap: () {},
               ),
               div(),

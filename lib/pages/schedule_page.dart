@@ -1038,7 +1038,7 @@ class _ErrorPlaceholder extends StatelessWidget {
       Padding(
         padding: const EdgeInsets.only(bottom: 18, top: 8),
         child: Text('Расписание',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700,
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700,
                 color: textPrimary)),
       ),
       Container(

@@ -112,10 +112,10 @@ class _TeacherPageState extends State<TeacherPage> {
   static DateTime _selectedDate = _dateOnlyT(DateTime.now());
 
   void _nextDay() => setState(
-      () => _selectedDate = _selectedDate.add(const Duration(days: 1)));
+          () => _selectedDate = _selectedDate.add(const Duration(days: 1)));
 
   void _prevDay() => setState(
-      () => _selectedDate = _selectedDate.subtract(const Duration(days: 1)));
+          () => _selectedDate = _selectedDate.subtract(const Duration(days: 1)));
 
   void _openCalendarFromOutside() {
     final repo = ScheduleRepository.instance;
@@ -294,31 +294,31 @@ class _TDayView extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 18, top: 8),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-              Text(
-                isToday ? 'Сегодня · ${_weekdayT(selectedDate)}'
+                  Text(
+                    isToday ? 'Сегодня · ${_weekdayT(selectedDate)}'
                         : _weekdayT(selectedDate),
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700,
-                    color: textPrimary),
-              ),
-              const SizedBox(height: 3),
-              Row(children: [
-                Text(_fmtDateT(selectedDate),
-                    style: TextStyle(fontSize: 15, color: textSecondary)),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: seed.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: seed.withOpacity(0.25), width: 1),
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700,
+                        color: textPrimary),
                   ),
-                  child: Text(teacherName,
-                      style: TextStyle(fontSize: 11,
-                          fontWeight: FontWeight.w600, color: seed)),
-                ),
-              ]),
-            ]),
+                  const SizedBox(height: 3),
+                  Row(children: [
+                    Text(_fmtDateT(selectedDate),
+                        style: TextStyle(fontSize: 15, color: textSecondary)),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: seed.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: seed.withOpacity(0.25), width: 1),
+                      ),
+                      child: Text(teacherName,
+                          style: TextStyle(fontSize: 11,
+                              fontWeight: FontWeight.w600, color: seed)),
+                    ),
+                  ]),
+                ]),
           ),
 
           // ── Ошибка обновления ──────────────────────────────
@@ -412,13 +412,13 @@ class _TLessonCard extends StatelessWidget {
             width: 54,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-              Text(lesson.timeStart,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-                      color: textPrimary)),
-              if (lesson.timeEnd.isNotEmpty)
-                Text(lesson.timeEnd,
-                    style: TextStyle(fontSize: 12, color: timeSub)),
-            ]),
+                  Text(lesson.timeStart,
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
+                          color: textPrimary)),
+                  if (lesson.timeEnd.isNotEmpty)
+                    Text(lesson.timeEnd,
+                        style: TextStyle(fontSize: 12, color: timeSub)),
+                ]),
           ),
 
           // Разделитель
@@ -436,50 +436,50 @@ class _TLessonCard extends StatelessWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-              Text(lesson.subject,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
-                      color: textPrimary)),
-              if (lesson.group.isNotEmpty) ...[
-                const SizedBox(height: 3),
-                Text(lesson.group,
-                    style: TextStyle(fontSize: 12, color: textTeacher)),
-              ],
-              if (lesson.type.isNotEmpty) ...[
-                const SizedBox(height: 1),
-                Text(lesson.type,
-                    style: TextStyle(fontSize: 11,
-                        fontStyle: FontStyle.italic,
-                        color: textTeacher.withOpacity(0.72))),
-              ],
-              if (lesson.room.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: roomBg,
-                    borderRadius: BorderRadius.circular(7),
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.white.withOpacity(0.10)
-                          : Colors.white.withOpacity(0.60),
-                      width: 1,
+                  Text(lesson.subject,
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
+                          color: textPrimary)),
+                  if (lesson.group.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(lesson.group,
+                        style: TextStyle(fontSize: 12, color: textTeacher)),
+                  ],
+                  if (lesson.type.isNotEmpty) ...[
+                    const SizedBox(height: 1),
+                    Text(lesson.type,
+                        style: TextStyle(fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                            color: textTeacher.withOpacity(0.72))),
+                  ],
+                  if (lesson.room.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: roomBg,
+                        borderRadius: BorderRadius.circular(7),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.10)
+                              : Colors.white.withOpacity(0.60),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.room_rounded, size: 11,
+                            color: textTeacher.withOpacity(0.7)),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(lesson.room,
+                              style: TextStyle(fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: textTeacher)),
+                        ),
+                      ]),
                     ),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.room_rounded, size: 11,
-                        color: textTeacher.withOpacity(0.7)),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(lesson.room,
-                          style: TextStyle(fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: textTeacher)),
-                    ),
-                  ]),
-                ),
-              ],
-            ]),
+                  ],
+                ]),
           ),
         ]),
       ),
@@ -502,72 +502,72 @@ class _TNoTeacherPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: EdgeInsets.only(
-            top: topPad, bottom: 120, left: 16, right: 16),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 18, top: 8),
-            child: Text('По преподавателю',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700,
-                    color: textPrimary)),
+    padding: EdgeInsets.only(
+        top: topPad, bottom: 120, left: 16, right: 16),
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 18, top: 8),
+        child: Text('По преподавателю',
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700,
+                color: textPrimary)),
+      ),
+      Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withOpacity(0.06)
+              : Colors.white.withOpacity(0.40),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withOpacity(0.12)
+                : Colors.white.withOpacity(0.65),
+            width: 1.4,
           ),
+        ),
+        child: Column(children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            width: 60, height: 60,
             decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withOpacity(0.06)
-                  : Colors.white.withOpacity(0.40),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withOpacity(0.12)
-                    : Colors.white.withOpacity(0.65),
-                width: 1.4,
-              ),
-            ),
-            child: Column(children: [
-              Container(
-                width: 60, height: 60,
-                decoration: BoxDecoration(
-                    color: seed.withOpacity(0.14), shape: BoxShape.circle),
-                child: Icon(Icons.person_rounded, size: 30, color: seed),
-              ),
-              const SizedBox(height: 16),
-              Text('Преподаватель не выбран',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700,
-                      color: textPrimary)),
-              const SizedBox(height: 8),
-              Text(
-                'Выберите преподавателя в настройках,\n'
-                'чтобы увидеть его расписание.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: textSecondary,
-                    height: 1.45),
-              ),
-              const SizedBox(height: 20),
-              GestureDetector(
-                onTap: onGoToSettings,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: seed.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: seed.withOpacity(0.3), width: 1),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.settings_rounded, size: 16, color: seed),
-                    const SizedBox(width: 8),
-                    Text('Настройки → Преподаватель',
-                        style: TextStyle(fontSize: 13,
-                            fontWeight: FontWeight.w600, color: seed)),
-                  ]),
-                ),
-              ),
-            ]),
+                color: seed.withOpacity(0.14), shape: BoxShape.circle),
+            child: Icon(Icons.person_rounded, size: 30, color: seed),
           ),
-        ],
-      );
+          const SizedBox(height: 16),
+          Text('Преподаватель не выбран',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700,
+                  color: textPrimary)),
+          const SizedBox(height: 8),
+          Text(
+            'Выберите преподавателя в настройках,\n'
+                'чтобы увидеть его расписание.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: textSecondary,
+                height: 1.45),
+          ),
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTap: onGoToSettings,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: seed.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: seed.withOpacity(0.3), width: 1),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.settings_rounded, size: 16, color: seed),
+                const SizedBox(width: 8),
+                Text('Настройки → Преподаватель',
+                    style: TextStyle(fontSize: 13,
+                        fontWeight: FontWeight.w600, color: seed)),
+              ]),
+            ),
+          ),
+        ]),
+      ),
+    ],
+  );
 }
 
 class _TLoadingPlaceholder extends StatelessWidget {
@@ -580,13 +580,13 @@ class _TLoadingPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: EdgeInsets.only(
-            top: topPad, bottom: 120, left: 16, right: 16),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 18, top: 8),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+    padding: EdgeInsets.only(
+        top: topPad, bottom: 120, left: 16, right: 16),
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 18, top: 8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text('По преподавателю',
                   style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700,
                       color: textPrimary)),
@@ -594,42 +594,42 @@ class _TLoadingPlaceholder extends StatelessWidget {
               Text(name,
                   style: TextStyle(fontSize: 15, color: textSecondary)),
             ]),
+      ),
+      Container(
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withOpacity(0.06)
+              : Colors.white.withOpacity(0.40),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withOpacity(0.12)
+                : Colors.white.withOpacity(0.65),
+            width: 1.4,
           ),
-          Container(
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withOpacity(0.06)
-                  : Colors.white.withOpacity(0.40),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withOpacity(0.12)
-                    : Colors.white.withOpacity(0.65),
-                width: 1.4,
-              ),
+        ),
+        child: Column(children: [
+          SizedBox(
+            width: 40, height: 40,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(seed),
             ),
-            child: Column(children: [
-              SizedBox(
-                width: 40, height: 40,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(seed),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text('Загружаем расписание...',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600,
-                      color: textPrimary)),
-              const SizedBox(height: 6),
-              Text('Подгружаем данные для $name',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: textSecondary,
-                      height: 1.4)),
-            ]),
           ),
-        ],
-      );
+          const SizedBox(height: 18),
+          Text('Загружаем расписание...',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600,
+                  color: textPrimary)),
+          const SizedBox(height: 6),
+          Text('Подгружаем данные для $name',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: textSecondary,
+                  height: 1.4)),
+        ]),
+      ),
+    ],
+  );
 }
 
 class _TErrorPlaceholder extends StatelessWidget {
@@ -644,143 +644,143 @@ class _TErrorPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: EdgeInsets.only(
-            top: topPad, bottom: 120, left: 16, right: 16),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 18, top: 8),
-            child: Text('По преподавателю',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700,
-                    color: textPrimary)),
-          ),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(isDark ? 0.12 : 0.08),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                  color: Colors.orange.withOpacity(0.3), width: 1.2),
-            ),
-            child: Column(children: [
-              Container(
-                width: 54, height: 54,
-                decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.15),
-                    shape: BoxShape.circle),
-                child: const Icon(Icons.wifi_off_rounded,
-                    size: 26, color: Colors.orange),
-              ),
-              const SizedBox(height: 14),
-              Text('Не удалось загрузить',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
-                      color: textPrimary)),
-              const SizedBox(height: 6),
-              Text(message, textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: textSecondary,
-                      height: 1.4)),
-              const SizedBox(height: 18),
-              GestureDetector(
-                onTap: onRetry,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 11),
-                  decoration: BoxDecoration(
-                    color: seed.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: seed.withOpacity(0.35), width: 1),
-                  ),
-                  child: Text('Повторить',
-                      style: TextStyle(fontSize: 14,
-                          fontWeight: FontWeight.w600, color: seed)),
-                ),
-              ),
-            ]),
-          ),
-        ],
-      );
-}
-
-class _TEmptyDay extends StatelessWidget {
-  final bool isDark; final Color seed, textPrimary, textSecondary;
-  const _TEmptyDay({required this.isDark, required this.seed,
-      required this.textPrimary, required this.textSecondary});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(28),
+    padding: EdgeInsets.only(
+        top: topPad, bottom: 120, left: 16, right: 16),
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 18, top: 8),
+        child: Text('По преподавателю',
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700,
+                color: textPrimary)),
+      ),
+      Container(
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withOpacity(0.06)
-              : Colors.white.withOpacity(0.35),
+          color: Colors.orange.withOpacity(isDark ? 0.12 : 0.08),
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
-            color: isDark
-                ? Colors.white.withOpacity(0.10)
-                : Colors.white.withOpacity(0.60),
-            width: 1.3,
-          ),
+              color: Colors.orange.withOpacity(0.3), width: 1.2),
         ),
         child: Column(children: [
           Container(
             width: 54, height: 54,
             decoration: BoxDecoration(
-                color: seed.withOpacity(0.12), shape: BoxShape.circle),
-            child: Icon(Icons.wb_sunny_rounded, size: 26, color: seed),
+                color: Colors.orange.withOpacity(0.15),
+                shape: BoxShape.circle),
+            child: const Icon(Icons.wifi_off_rounded,
+                size: 26, color: Colors.orange),
           ),
           const SizedBox(height: 14),
-          Text('Занятий нет',
+          Text('Не удалось загрузить',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
                   color: textPrimary)),
           const SizedBox(height: 6),
-          Text('В этот день пар нет.',
+          Text(message, textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: textSecondary,
                   height: 1.4)),
+          const SizedBox(height: 18),
+          GestureDetector(
+            onTap: onRetry,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 24, vertical: 11),
+              decoration: BoxDecoration(
+                color: seed.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: seed.withOpacity(0.35), width: 1),
+              ),
+              child: Text('Повторить',
+                  style: TextStyle(fontSize: 14,
+                      fontWeight: FontWeight.w600, color: seed)),
+            ),
+          ),
         ]),
-      );
+      ),
+    ],
+  );
+}
+
+class _TEmptyDay extends StatelessWidget {
+  final bool isDark; final Color seed, textPrimary, textSecondary;
+  const _TEmptyDay({required this.isDark, required this.seed,
+    required this.textPrimary, required this.textSecondary});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(28),
+    decoration: BoxDecoration(
+      color: isDark
+          ? Colors.white.withOpacity(0.06)
+          : Colors.white.withOpacity(0.35),
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(
+        color: isDark
+            ? Colors.white.withOpacity(0.10)
+            : Colors.white.withOpacity(0.60),
+        width: 1.3,
+      ),
+    ),
+    child: Column(children: [
+      Container(
+        width: 54, height: 54,
+        decoration: BoxDecoration(
+            color: seed.withOpacity(0.12), shape: BoxShape.circle),
+        child: Icon(Icons.wb_sunny_rounded, size: 26, color: seed),
+      ),
+      const SizedBox(height: 14),
+      Text('Занятий нет',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
+              color: textPrimary)),
+      const SizedBox(height: 6),
+      Text('В этот день пар нет. Отдыхайте!',
+          style: TextStyle(fontSize: 13, color: textSecondary,
+              height: 1.4)),
+    ]),
+  );
 }
 
 class _TErrorBanner extends StatelessWidget {
   final String message; final bool isDark; final Color seed;
   final VoidCallback? onRetry;
   const _TErrorBanner({required this.message, required this.isDark,
-      required this.seed, this.onRetry});
+    required this.seed, this.onRetry});
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(isDark ? 0.15 : 0.10),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.orange.withOpacity(0.28), width: 1),
-        ),
-        child: Row(children: [
-          const Icon(Icons.info_outline_rounded, color: Colors.orange, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(message,
-                style: const TextStyle(fontSize: 12, color: Colors.orange,
-                    height: 1.3)),
-          ),
-          if (onRetry != null) ...[
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: onRetry,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: Colors.orange.withOpacity(0.35), width: 1),
-                ),
-                child: const Text('Повторить',
-                    style: TextStyle(fontSize: 11,
-                        fontWeight: FontWeight.w600, color: Colors.orange)),
-              ),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    decoration: BoxDecoration(
+      color: Colors.orange.withOpacity(isDark ? 0.15 : 0.10),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: Colors.orange.withOpacity(0.28), width: 1),
+    ),
+    child: Row(children: [
+      const Icon(Icons.info_outline_rounded, color: Colors.orange, size: 16),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(message,
+            style: const TextStyle(fontSize: 12, color: Colors.orange,
+                height: 1.3)),
+      ),
+      if (onRetry != null) ...[
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: onRetry,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                  color: Colors.orange.withOpacity(0.35), width: 1),
             ),
-          ],
-        ]),
-      );
+            child: const Text('Повторить',
+                style: TextStyle(fontSize: 11,
+                    fontWeight: FontWeight.w600, color: Colors.orange)),
+          ),
+        ),
+      ],
+    ]),
+  );
 }
 
 // ════════════════════ CALENDAR DIALOG ════════════════════════════
@@ -806,9 +806,9 @@ class _TCalendarDialogState extends State<_TCalendarDialog> {
   }
 
   void _prevMonth() => setState(
-      () => _viewing = DateTime(_viewing.year, _viewing.month - 1));
+          () => _viewing = DateTime(_viewing.year, _viewing.month - 1));
   void _nextMonth() => setState(
-      () => _viewing = DateTime(_viewing.year, _viewing.month + 1));
+          () => _viewing = DateTime(_viewing.year, _viewing.month + 1));
 
   @override
   Widget build(BuildContext context) {
@@ -859,8 +859,8 @@ class _TCalendarDialogState extends State<_TCalendarDialog> {
                   Expanded(
                     child: Text(
                       '${_kMonthsT[_viewing.month][0].toUpperCase()}'
-                      '${_kMonthsT[_viewing.month].substring(1)} '
-                      '${_viewing.year}',
+                          '${_kMonthsT[_viewing.month].substring(1)} '
+                          '${_viewing.year}',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 16,
                           fontWeight: FontWeight.w700, color: textPrimary),
@@ -877,12 +877,12 @@ class _TCalendarDialogState extends State<_TCalendarDialog> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
                       .map((d) => SizedBox(
-                            width: 36,
-                            child: Text(d, textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: textSecondary)),
-                          ))
+                    width: 36,
+                    child: Text(d, textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: textSecondary)),
+                  ))
                       .toList(),
                 ),
 
@@ -893,7 +893,7 @@ class _TCalendarDialogState extends State<_TCalendarDialog> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 7, childAspectRatio: 1,
                     mainAxisSpacing: 4, crossAxisSpacing: 0,
                   ),
@@ -918,7 +918,7 @@ class _TCalendarDialogState extends State<_TCalendarDialog> {
                           shape: BoxShape.circle,
                           border: isToday && !isSel
                               ? Border.all(
-                                  color: seed.withOpacity(0.5), width: 1.5)
+                              color: seed.withOpacity(0.5), width: 1.5)
                               : null,
                         ),
                         child: Stack(alignment: Alignment.center, children: [
@@ -990,12 +990,12 @@ class _TMonthBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 34, height: 34,
-          decoration: BoxDecoration(
-              color: color.withOpacity(0.12), shape: BoxShape.circle),
-          child: Icon(icon, size: 20, color: color),
-        ),
-      );
+    onTap: onTap,
+    child: Container(
+      width: 34, height: 34,
+      decoration: BoxDecoration(
+          color: color.withOpacity(0.12), shape: BoxShape.circle),
+      child: Icon(icon, size: 20, color: color),
+    ),
+  );
 }
